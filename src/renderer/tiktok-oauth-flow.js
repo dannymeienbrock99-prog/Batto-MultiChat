@@ -40,7 +40,9 @@
     }catch(error){text(error?.message||String(error),true)}
   }
   function decorate(){
-    const button=document.getElementById("tt-login");if(!button||document.getElementById("tt-oauth-basic"))return;
+    const button=document.getElementById("tt-login");
+    if(!button||button.dataset.battoOauthDecorated==="1"||document.getElementById("tt-oauth-extended"))return;
+    button.dataset.battoOauthDecorated="1";
     button.textContent="TikTok Basis-Login testen";
     const extended=document.createElement("button");extended.id="tt-oauth-extended";extended.textContent="Creator-Rechte freischalten";
     button.insertAdjacentElement("afterend",extended);
@@ -52,5 +54,5 @@
     const button=event.target?.closest?.("#tt-login");if(!button)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();void start(BASIC_SCOPES);
   },true);
-  const observer=new MutationObserver(decorate);observer.observe(document.documentElement,{subtree:true,childList:true});decorate();
+  const observer=new MutationObserver(()=>decorate());observer.observe(document.documentElement,{subtree:true,childList:true});decorate();
 })();
