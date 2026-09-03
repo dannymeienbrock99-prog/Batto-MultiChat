@@ -1,29 +1,21 @@
 "use strict";
+const crypto=require("node:crypto");
 const WebSocket=require("ws");
-class ObsWebSocketService{
-  constructor(){this.socket=null;this.connected=false;this.url="ws://127.0.0.1:4455";}
-  status(){return{connected:this.connected,url:this.url};}
-  async connect({url,password}={}){
-    this.url=String(url||this.url);
-    await this.disconnect();
-    return await new Promise((resolve,reject)=>{
-      const ws=new WebSocket(this.url); this.socket=ws;
-      const timer=setTimeout(()=>{try{ws.terminate()}catch{};reject(new Error("OBS WebSocket Zeitüberschreitung."));},5000);
-      ws.on("open",()=>{});
-      ws.on("message",raw=>{
-        try{
-          const msg=JSON.parse(String(raw));
-          if(msg.op===0){
-            const identify={op:1,d:{rpcVersion:1}};
-            if(password)identify.d.authentication=password;
-            ws.send(JSON.stringify(identify));
-          }else if(msg.op===2){clearTimeout(timer);this.connected=true;resolve(this.status());}
-        }catch{}
-      });
-      ws.on("error",e=>{clearTimeout(timer);this.connected=false;reject(e);});
-      ws.on("close",()=>{this.connected=false;});
-    });
-  }
-  async disconnect(){if(this.socket){try{this.socket.close()}catch{}}this.socket=null;this.connected=false;return this.status();}
+const {EventEmitter}=require("node:events");
+const sha=v=>crypto.createHash("sha256").update(v).digest("base64");
+const auth=(password,salt,challenge)=>sha(`${sha(`${password}${salt}`)}${challenge}`);
+class ObsWebSocketService extends EventEmitter{
+  constructor(){super();this.socket=null;this.identified=false;this.pending=new Map();this.counter=0;this.url="ws://127.0.0.1:4455";this.lastError="";}
+  status(){return{connected:Boolean(this.socket&&this.socket.readyState===WebSocket.OPEN&&this.identified),url:this.url,lastError:this.lastError};}
+  async connect({url="ws://127.0.0.1:4455",password="",timeoutMs=8000}={}){await this.disconnect();this.url=String(url||"ws://127.0.0.1:4455");this.lastError="";return new Promise((resolve,reject)=>{let settled=false;const ws=new WebSocket(this.url,{handshakeTimeout:timeoutMs,maxPayload:8*1024*1024});this.socket=ws;const timer=setTimeout(()=>fail(new Error("Zeitüberschreitung beim Verbinden mit OBS WebSocket.")),timeoutMs);const fail=e=>{if(settled)return;settled=true;clearTimeout(timer);this.lastError=String(e?.message||e);this.identified=false;try{ws.close()}catch{}reject(e)};ws.once("error",fail);ws.on("message",raw=>{let msg;try{msg=JSON.parse(String(raw))}catch{return}if(msg.op===0){const identify={rpcVersion:1,eventSubscriptions:0};const a=msg.d?.authentication;if(a){if(!password)return fail(new Error("OBS verlangt ein WebSocket-Passwort."));identify.authentication=auth(String(password),a.salt,a.challenge)}ws.send(JSON.stringify({op:1,d:identify}));return}if(msg.op===2){if(!settled){settled=true;clearTimeout(timer);this.identified=true;this.emit("connected",this.status());resolve(this.status())}return}if(msg.op===7){const id=msg.d?.requestId,p=this.pending.get(id);if(!p)return;this.pending.delete(id);clearTimeout(p.timer);const s=msg.d?.requestStatus||{};if(s.result)p.resolve(msg.d?.responseData||{});else p.reject(new Error(s.comment||`${msg.d?.requestType||"OBS-Anfrage"} fehlgeschlagen.`));}});ws.on("close",()=>{this.identified=false;if(this.socket===ws)this.socket=null;for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error("OBS hat die Verbindung geschlossen."))}this.pending.clear();this.emit("disconnected",this.status())});ws.on("error",e=>{this.lastError=String(e?.message||e)});});}
+  async disconnect(){const ws=this.socket;this.socket=null;this.identified=false;if(!ws)return this.status();await new Promise(resolve=>{if(ws.readyState===WebSocket.CLOSED)return resolve();const t=setTimeout(resolve,600);ws.once("close",()=>{clearTimeout(t);resolve()});try{ws.close(1000,"BATTO MULTI-CHAT getrennt")}catch{resolve()}});return this.status();}
+  request(type,data={},timeoutMs=7000){if(!this.status().connected)return Promise.reject(new Error("OBS ist nicht verbunden."));const requestId=`${Date.now()}-${++this.counter}`;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(requestId);reject(new Error(`Zeitüberschreitung bei OBS-Anfrage „${type}“.`))},timeoutMs);this.pending.set(requestId,{resolve,reject,timer});this.socket.send(JSON.stringify({op:6,d:{requestType:type,requestId,requestData:data}}),error=>{if(!error)return;clearTimeout(timer);this.pending.delete(requestId);reject(error)})});}
+  async scenes(){const data=await this.request("GetSceneList");return{current:data.currentProgramSceneName||"",scenes:(data.scenes||[]).map(s=>({name:s.sceneName,index:s.sceneIndex}))};}
+  async sceneItems(sceneName){const data=await this.request("GetSceneItemList",{sceneName:String(sceneName)});return(data.sceneItems||[]).map(i=>({sceneItemId:i.sceneItemId,sourceName:i.sourceName,inputKind:i.inputKind||"",enabled:Boolean(i.sceneItemEnabled),locked:Boolean(i.sceneItemLocked)}));}
+  setScene(sceneName){return this.request("SetCurrentProgramScene",{sceneName:String(sceneName)});}
+  setSceneItemEnabled(sceneName,sceneItemId,enabled){return this.request("SetSceneItemEnabled",{sceneName:String(sceneName),sceneItemId:Number(sceneItemId),sceneItemEnabled:Boolean(enabled)});}
+  async inputSettings(inputName){return this.request("GetInputSettings",{inputName:String(inputName)});}
+  async createBrowserSource(sceneName,inputName,url,width=1920,height=1080){return this.request("CreateInput",{sceneName:String(sceneName),inputName:String(inputName),inputKind:"browser_source",inputSettings:{url:String(url),width:Number(width),height:Number(height),reroute_audio:false,shutdown:false},sceneItemEnabled:true});}
+  async ensureOverlaySource({sceneName,inputName="BATTO Stream Overlay",url="http://127.0.0.1:48621/overlay",width=1920,height=1080}={}){if(!sceneName)throw new Error("OBS-Szene fehlt.");const items=await this.sceneItems(sceneName);const existing=items.find(i=>i.sourceName===inputName);if(existing)return{created:false,...existing};const result=await this.createBrowserSource(sceneName,inputName,url,width,height);return{created:true,...result};}
 }
 module.exports={ObsWebSocketService};
