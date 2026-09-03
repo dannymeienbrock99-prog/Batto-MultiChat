@@ -4,7 +4,7 @@ const fs=require("node:fs/promises");
 const {pathToFileURL}=require("node:url");
 const {BrowserWindow,screen}=require("electron");
 
-const RENDERER_MARKER="BATTO-R20260903-2";
+const RENDERER_MARKER="BATTO-R20260903-3";
 function intersects(a,b){return a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;}
 function overlapArea(a,b){const left=Math.max(a.x,b.x),top=Math.max(a.y,b.y),right=Math.min(a.x+a.width,b.x+b.width),bottom=Math.min(a.y+a.height,b.y+b.height);return Math.max(0,right-left)*Math.max(0,bottom-top);}
 function visibleOnAnyDisplay(bounds,displays){return displays.some(d=>intersects(bounds,d.workArea)&&overlapArea(bounds,d.workArea)>=Math.min(120,bounds.width)*Math.min(80,bounds.height));}
@@ -58,10 +58,16 @@ class ChatWindowManager{
     this.window.webContents.on("console-message",(_event,level,message,line,sourceId)=>this.onDiagnostic(`Console L${level}: ${message} (${sourceId||"renderer"}:${line||0})`));
     const rendererUrl=pathToFileURL(this.rendererPath);rendererUrl.searchParams.set("batto",`${RENDERER_MARKER}-${Date.now()}`);
     this.onDiagnostic(`Renderer-Ziel: ${rendererUrl.toString()}`);
-    void this.window.webContents.session.clearCache().catch(error=>this.onDiagnostic(`Cache konnte nicht geleert werden: ${error?.message||error}`)).finally(()=>{
-      if(!this.window||this.window.isDestroyed())return;
-      this.window.loadURL(rendererUrl.toString()).catch(error=>{this.onDiagnostic(`loadURL fehlgeschlagen: ${error?.stack||error?.message||error}`);ensureVisible();});
+
+    // WICHTIG: Renderer sofort laden. clearCache() darf den Start niemals blockieren.
+    this.window.loadURL(rendererUrl.toString()).catch(error=>{
+      this.onDiagnostic(`loadURL fehlgeschlagen: ${error?.stack||error?.message||error}`);
+      ensureVisible();
     });
+    void this.window.webContents.session.clearCache().then(()=>{
+      this.onDiagnostic("Chromium-Cache im Hintergrund geleert.");
+    }).catch(error=>this.onDiagnostic(`Cache konnte nicht geleert werden: ${error?.message||error}`));
+
     setTimeout(ensureVisible,1500);
     setTimeout(ensureVisible,4000);
     const capture=()=>{if(!this.window||this.window.isDestroyed())return;const b=this.window.getBounds();this.settings={...this.settings,x:b.x,y:b.y,width:b.width,height:b.height};void this.save()};
