@@ -2,6 +2,7 @@
 const {CngBrowserTools}=require("../services/cng-browser-tools.cjs");
 
 function adapter(runtime,name){const a=runtime.platforms?.adapters?.get?.(name);if(!a)throw new Error(`${name} Connector ist nicht verfügbar.`);return a;}
+async function eulerApiKeyRequest(runtime,path){return runtime.euler.request(path,{oauth:false,requireApiKey:true});}
 
 async function sendChat(runtime,platform,message){
   platform=String(platform||"").toLowerCase();message=String(message||"").trim();if(!message)throw new Error("Nachricht ist leer.");
@@ -23,19 +24,18 @@ async function diagnostics(runtime){
     obs:runtime.obs?.status?.()||null,
     platforms:runtime.platforms?.statuses?.()||{},
     tiktok:{apiKeyConfigured:tiktokApiKey,oauth:tiktokOAuth,context:{...runtime.context}},
-    twitch:{oauth:twitchOAuth},
-    youtube:{oauth:youtubeOAuth},
-    cng
+    twitch:{oauth:twitchOAuth},youtube:{oauth:youtubeOAuth},cng
   };
 }
 
 function applyReleaseHardening(runtime,{ipcMain,shell,clipboard}={}){
   if(!runtime)throw new Error("Runtime fehlt.");
-  runtime.cngBrowser=new CngBrowserTools({runtime,ipcMain,shell,clipboard});
-  runtime.cngBrowser.register();
+  runtime.cngBrowser=new CngBrowserTools({runtime,ipcMain,shell,clipboard});runtime.cngBrowser.register();
   ipcMain.handle("chat:send",(_e,v={})=>sendChat(runtime,v.platform,v.message));
   ipcMain.handle("runtime:diagnostics",()=>diagnostics(runtime));
   ipcMain.handle("tiktok:oauthIntrospect",()=>runtime.eulerOAuth.introspect());
+  ipcMain.handle("tiktok:eulerAccount",()=>eulerApiKeyRequest(runtime,"/accounts/me"));
+  ipcMain.handle("tiktok:eulerRateLimits",()=>eulerApiKeyRequest(runtime,"/accounts/me/rate_limits"));
   return runtime;
 }
-module.exports={applyReleaseHardening,sendChat,diagnostics};
+module.exports={applyReleaseHardening,sendChat,diagnostics,eulerApiKeyRequest};
