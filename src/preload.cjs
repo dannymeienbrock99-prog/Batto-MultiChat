@@ -11,5 +11,10 @@ contextBridge.exposeInMainWorld("batto",{
   toggleAlwaysOnTop:()=>ipcRenderer.invoke("window:alwaysOnTop"),
   obsStatus:()=>ipcRenderer.invoke("obs:status"),
   obsConnect:c=>ipcRenderer.invoke("obs:connect",c||{}),
-  obsDisconnect:()=>ipcRenderer.invoke("obs:disconnect")
+  obsDisconnect:()=>ipcRenderer.invoke("obs:disconnect"),
+  overlayStatus:()=>ipcRenderer.invoke("overlay:status"),
+  overlayOpen:()=>ipcRenderer.invoke("overlay:open"),
+  overlayCopyUrl:()=>ipcRenderer.invoke("overlay:copyUrl"),
+  overlayTestChat:()=>ipcRenderer.invoke("overlay:testChat"),
+  overlayTestEvent:()=>ipcRenderer.invoke("overlay:testEvent")
 });
