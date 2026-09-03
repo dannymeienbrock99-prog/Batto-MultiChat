@@ -3,7 +3,7 @@ const path=require("node:path");
 const fs=require("node:fs/promises");
 const {BrowserWindow,screen}=require("electron");
 
-function intersects(a,b){return a.x<a.x+a.width&&a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;}
+function intersects(a,b){return a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;}
 function visibleOnAnyDisplay(bounds,displays){return displays.some(d=>intersects(bounds,d.workArea));}
 
 class ChatWindowManager{
