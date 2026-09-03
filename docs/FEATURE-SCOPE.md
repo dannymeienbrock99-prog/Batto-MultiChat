@@ -96,7 +96,6 @@ Jede Plattform erhält einen eigenen Connector. Alle Plattformereignisse werden 
 - Topliste
 - Co-Host
 - TikTok-Ereignisse
-- Herzfrequenz/Sensorwerte, wenn verfügbar
 - weitere frei positionierbare Overlay-Elemente
 
 ### Multi-Gast
@@ -139,13 +138,19 @@ Jede Plattform erhält einen eigenen Connector. Alle Plattformereignisse werden 
 - technische Fehlerdetails nur im Diagnosebereich
 
 ### Weitere bestehende sinnvolle Funktionen
-- Hardware-/Sensorinformationen, soweit sie für Overlay oder Stream relevant sind
-- lokale Heart-Rate-/Sensoranbindung
 - Hologramm-Funktionen
 - OBS-Browserquellen
 - lokale Server/Bridges, soweit sie für Multi-Chat und Streamfunktionen benötigt werden
 
 ## Bewusst NICHT enthalten
+
+### Keine Hardware-/Sensorfunktionen
+- kein Hardware-Monitoring
+- keine CPU-/GPU-/RAM-/Temperaturanzeigen
+- keine Herzfrequenz
+- keine Smartwatch-/Wearable-Anbindung
+- keine Aqua-Computer-/Sensor-Anbindung
+- keine lokalen Sensorwerte im Overlay
 
 ### Kein Plugin-System
 - kein Plugin-Loader
