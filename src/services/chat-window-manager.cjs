@@ -1,8 +1,10 @@
 "use strict";
 const path=require("node:path");
 const fs=require("node:fs/promises");
+const {pathToFileURL}=require("node:url");
 const {BrowserWindow,screen}=require("electron");
 
+const RENDERER_MARKER="BATTO-R20260903-1";
 function intersects(a,b){return a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;}
 function overlapArea(a,b){const left=Math.max(a.x,b.x),top=Math.max(a.y,b.y),right=Math.min(a.x+a.width,b.x+b.width),bottom=Math.min(a.y+a.height,b.y+b.height);return Math.max(0,right-left)*Math.max(0,bottom-top);}
 function visibleOnAnyDisplay(bounds,displays){return displays.some(d=>intersects(bounds,d.workArea)&&overlapArea(bounds,d.workArea)>=Math.min(120,bounds.width)*Math.min(80,bounds.height));}
@@ -10,7 +12,7 @@ function centeredBounds(work,width,height){width=Math.min(Math.max(420,width),wo
 
 class ChatWindowManager{
   constructor({userDataFile,preloadPath,rendererPath,iconPath,onClosed,onDiagnostic}={}){
-    this.userDataFile=userDataFile;this.preloadPath=preloadPath;this.rendererPath=rendererPath;this.iconPath=iconPath||path.join(__dirname,"..","..","resources","batto-icon.png");this.onClosed=onClosed||(()=>{});this.onDiagnostic=onDiagnostic||(()=>{});this.window=null;this.settings={x:null,y:null,width:560,height:760,alwaysOnTop:false};
+    this.userDataFile=userDataFile;this.preloadPath=preloadPath;this.rendererPath=path.resolve(rendererPath);this.iconPath=iconPath||path.join(__dirname,"..","..","resources","batto-icon.png");this.onClosed=onClosed||(()=>{});this.onDiagnostic=onDiagnostic||(()=>{});this.window=null;this.settings={x:null,y:null,width:560,height:760,alwaysOnTop:false};
   }
   async load(){try{this.settings={...this.settings,...JSON.parse(await fs.readFile(this.userDataFile,"utf8"))}}catch{}return this.settings}
   async save(){await fs.mkdir(path.dirname(this.userDataFile),{recursive:true});await fs.writeFile(this.userDataFile,JSON.stringify(this.settings,null,2),"utf8")}
@@ -26,7 +28,7 @@ class ChatWindowManager{
       this.settings={...this.settings,x,y,width,height};void this.save();
       this.onDiagnostic("Gespeicherte Fensterposition war nicht ausreichend sichtbar; BATTO wurde auf den Hauptmonitor zurückgesetzt.");
     }
-    this.window=new BrowserWindow({title:"Batto Multi-Chat",icon:this.iconPath,width,height,minWidth:420,minHeight:520,x,y,show:false,backgroundColor:"#070b12",autoHideMenuBar:true,webPreferences:{preload:this.preloadPath,contextIsolation:true,nodeIntegration:false,sandbox:false}});
+    this.window=new BrowserWindow({title:`Batto Multi-Chat [${RENDERER_MARKER}]`,icon:this.iconPath,width,height,minWidth:420,minHeight:520,x,y,show:false,backgroundColor:"#070b12",autoHideMenuBar:true,webPreferences:{preload:this.preloadPath,contextIsolation:true,nodeIntegration:false,sandbox:false}});
     this.window.setAlwaysOnTop(Boolean(this.settings.alwaysOnTop));
     let shown=false;
     const ensureVisible=()=>{
@@ -37,11 +39,21 @@ class ChatWindowManager{
       this.window.focus();this.window.moveTop();
     };
     this.window.once("ready-to-show",ensureVisible);
-    this.window.webContents.once("did-finish-load",ensureVisible);
+    this.window.webContents.once("did-finish-load",()=>{
+      const loaded=this.window?.webContents?.getURL?.()||"";
+      this.onDiagnostic(`Renderer geladen: ${loaded}`);
+      if(this.window&&!this.window.isDestroyed())this.window.setTitle(`Batto Multi-Chat [${RENDERER_MARKER}]`);
+      ensureVisible();
+    });
     this.window.webContents.on("did-fail-load",(_event,code,description,url)=>{this.onDiagnostic(`Renderer konnte nicht geladen werden: ${code} ${description} ${url||""}`);ensureVisible();});
     this.window.webContents.on("render-process-gone",(_event,details)=>this.onDiagnostic(`Renderer-Prozess beendet: ${details?.reason||"unbekannt"} (${details?.exitCode??"?"})`));
     this.window.webContents.on("preload-error",(_event,preloadPath,error)=>this.onDiagnostic(`Preload-Fehler ${preloadPath}: ${error?.stack||error?.message||error}`));
-    this.window.loadFile(this.rendererPath).catch(error=>{this.onDiagnostic(`loadFile fehlgeschlagen: ${error?.stack||error?.message||error}`);ensureVisible();});
+    const rendererUrl=pathToFileURL(this.rendererPath);rendererUrl.searchParams.set("batto",`${RENDERER_MARKER}-${Date.now()}`);
+    this.onDiagnostic(`Renderer-Ziel: ${rendererUrl.toString()}`);
+    void this.window.webContents.session.clearCache().catch(error=>this.onDiagnostic(`Cache konnte nicht geleert werden: ${error?.message||error}`)).finally(()=>{
+      if(!this.window||this.window.isDestroyed())return;
+      this.window.loadURL(rendererUrl.toString()).catch(error=>{this.onDiagnostic(`loadURL fehlgeschlagen: ${error?.stack||error?.message||error}`);ensureVisible();});
+    });
     setTimeout(ensureVisible,1500);
     setTimeout(ensureVisible,4000);
     const capture=()=>{if(!this.window||this.window.isDestroyed())return;const b=this.window.getBounds();this.settings={...this.settings,x:b.x,y:b.y,width:b.width,height:b.height};void this.save()};
@@ -51,4 +63,4 @@ class ChatWindowManager{
   }
   toggleAlwaysOnTop(){this.settings.alwaysOnTop=!this.settings.alwaysOnTop;this.window?.setAlwaysOnTop(this.settings.alwaysOnTop);void this.save();return this.settings.alwaysOnTop}
 }
-module.exports={ChatWindowManager,visibleOnAnyDisplay,centeredBounds};
+module.exports={ChatWindowManager,visibleOnAnyDisplay,centeredBounds,RENDERER_MARKER};
