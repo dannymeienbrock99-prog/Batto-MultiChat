@@ -1,10 +1,9 @@
 "use strict";
 const path=require("node:path");
 const fs=require("node:fs/promises");
-const {pathToFileURL}=require("node:url");
 const {BrowserWindow,screen}=require("electron");
 
-const RENDERER_MARKER="BATTO-R20260903-3";
+const RENDERER_MARKER="BATTO-R20260903-4";
 function intersects(a,b){return a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;}
 function overlapArea(a,b){const left=Math.max(a.x,b.x),top=Math.max(a.y,b.y),right=Math.min(a.x+a.width,b.x+b.width),bottom=Math.min(a.y+a.height,b.y+b.height);return Math.max(0,right-left)*Math.max(0,bottom-top);}
 function visibleOnAnyDisplay(bounds,displays){return displays.some(d=>intersects(bounds,d.workArea)&&overlapArea(bounds,d.workArea)>=Math.min(120,bounds.width)*Math.min(80,bounds.height));}
@@ -30,7 +29,7 @@ class ChatWindowManager{
     }
     this.window=new BrowserWindow({title:`Batto Multi-Chat [${RENDERER_MARKER}]`,icon:this.iconPath,width,height,minWidth:420,minHeight:520,x,y,show:false,backgroundColor:"#070b12",autoHideMenuBar:true,webPreferences:{preload:this.preloadPath,contextIsolation:true,nodeIntegration:false,sandbox:false}});
     this.window.setAlwaysOnTop(Boolean(this.settings.alwaysOnTop));
-    let shown=false;
+    let shown=false,navigationFinished=false,fallbackUsed=false;
     const ensureVisible=()=>{
       if(!this.window||this.window.isDestroyed())return;
       if(!shown){shown=true;this.window.restore();this.window.show();}
@@ -39,14 +38,18 @@ class ChatWindowManager{
       this.window.focus();this.window.moveTop();
     };
     this.window.once("ready-to-show",ensureVisible);
-    this.window.webContents.once("did-finish-load",async()=>{
+    this.window.webContents.on("did-start-loading",()=>this.onDiagnostic("did-start-loading"));
+    this.window.webContents.on("dom-ready",()=>this.onDiagnostic(`dom-ready: ${this.window?.webContents?.getURL?.()||""}`));
+    this.window.webContents.on("did-stop-loading",()=>this.onDiagnostic(`did-stop-loading: ${this.window?.webContents?.getURL?.()||""}`));
+    this.window.webContents.on("did-finish-load",async()=>{
+      navigationFinished=true;
       const loaded=this.window?.webContents?.getURL?.()||"";
       this.onDiagnostic(`Renderer geladen: ${loaded}`);
-      if(this.window&&!this.window.isDestroyed())this.window.setTitle(`Batto Multi-Chat [${RENDERER_MARKER}]`);
+      if(this.window&&!this.window.isDestroyed())this.window.setTitle(`Batto Multi-Chat [${RENDERER_MARKER}]${fallbackUsed?" [FALLBACK]":""}`);
       try{
         const state=await this.window.webContents.executeJavaScript(`(()=>({href:location.href,title:document.title,bodyLength:(document.body?.innerHTML||'').length,rootExists:!!document.getElementById('multi-chat-root'),rootLength:(document.getElementById('multi-chat-root')?.innerHTML||'').length,batto:!!window.batto}))()`);
         this.onDiagnostic(`Renderer-Status: ${JSON.stringify(state)}`);
-        if(!state.rootExists||state.rootLength<20){
+        if(!fallbackUsed&&(!state.rootExists||state.rootLength<20)){
           await this.window.webContents.executeJavaScript(`(()=>{document.body.innerHTML='<div style="height:100vh;display:grid;place-items:center;background:#090d14;color:#fff;font:16px Segoe UI,sans-serif"><div style="max-width:620px;padding:28px;border:1px solid #33445b;border-radius:12px;background:#0c121c"><b>BATTO MULTI-CHAT – Renderer leer</b><p>Die HTML-Datei wurde geladen, aber die Oberfläche wurde nicht aufgebaut.</p><p style="color:#9fb0c8">Pfad: '+location.href+'</p><p style="color:#ff9ca2">Preload/API: '+(window.batto?'vorhanden':'FEHLT')+'</p></div></div>';return true})()`);
         }
       }catch(error){this.onDiagnostic(`Renderer-Inspektion fehlgeschlagen: ${error?.stack||error?.message||error}`)}
@@ -56,17 +59,28 @@ class ChatWindowManager{
     this.window.webContents.on("render-process-gone",(_event,details)=>this.onDiagnostic(`Renderer-Prozess beendet: ${details?.reason||"unbekannt"} (${details?.exitCode??"?"})`));
     this.window.webContents.on("preload-error",(_event,preloadPath,error)=>this.onDiagnostic(`Preload-Fehler ${preloadPath}: ${error?.stack||error?.message||error}`));
     this.window.webContents.on("console-message",(_event,level,message,line,sourceId)=>this.onDiagnostic(`Console L${level}: ${message} (${sourceId||"renderer"}:${line||0})`));
-    const rendererUrl=pathToFileURL(this.rendererPath);rendererUrl.searchParams.set("batto",`${RENDERER_MARKER}-${Date.now()}`);
-    this.onDiagnostic(`Renderer-Ziel: ${rendererUrl.toString()}`);
 
-    // WICHTIG: Renderer sofort laden. clearCache() darf den Start niemals blockieren.
-    this.window.loadURL(rendererUrl.toString()).catch(error=>{
-      this.onDiagnostic(`loadURL fehlgeschlagen: ${error?.stack||error?.message||error}`);
+    this.onDiagnostic(`Renderer-Datei: ${this.rendererPath}`);
+    void fs.access(this.rendererPath).then(()=>this.onDiagnostic("Renderer-Datei existiert und ist lesbar.")).catch(error=>this.onDiagnostic(`Renderer-Datei NICHT lesbar: ${error?.message||error}`));
+
+    this.onDiagnostic("Starte Renderer mit BrowserWindow.loadFile().");
+    this.window.loadFile(this.rendererPath,{query:{batto:`${RENDERER_MARKER}-${Date.now()}`}}).catch(error=>{
+      this.onDiagnostic(`loadFile fehlgeschlagen: ${error?.stack||error?.message||error}`);
       ensureVisible();
     });
-    void this.window.webContents.session.clearCache().then(()=>{
-      this.onDiagnostic("Chromium-Cache im Hintergrund geleert.");
-    }).catch(error=>this.onDiagnostic(`Cache konnte nicht geleert werden: ${error?.message||error}`));
+
+    // Cachepflege ist rein optional und blockiert den Renderer niemals.
+    void this.window.webContents.session.clearCache().then(()=>this.onDiagnostic("Chromium-Cache im Hintergrund geleert.")).catch(error=>this.onDiagnostic(`Cache konnte nicht geleert werden: ${error?.message||error}`));
+
+    // Falls selbst loadFile in Chromium hängen bleibt, darf BATTO nie wieder nur leer bleiben.
+    setTimeout(()=>{
+      if(navigationFinished||!this.window||this.window.isDestroyed())return;
+      fallbackUsed=true;
+      this.onDiagnostic("Renderer-Navigation nach 3 Sekunden nicht abgeschlossen. Lade Diagnose-Fallback.");
+      const html=`<!doctype html><meta charset="utf-8"><title>BATTO Renderer Diagnose</title><body style="margin:0;background:#090d14;color:#e9eef6;font:15px Segoe UI,sans-serif"><div style="min-height:100vh;display:grid;place-items:center"><div style="max-width:700px;margin:24px;padding:28px;border:1px solid #33445b;border-radius:12px;background:#0c121c"><h2>BATTO MULTI-CHAT – Renderer-Navigation hängt</h2><p>Electron konnte die lokale Oberfläche nicht innerhalb von 3 Sekunden fertig laden.</p><p><b>Zieldatei:</b><br>${this.rendererPath.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}</p><p>Sieh im CMD nach den Zeilen <b>[BATTO Renderer]</b>.</p></div></div></body>`;
+      this.window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch(error=>this.onDiagnostic(`Diagnose-Fallback fehlgeschlagen: ${error?.stack||error?.message||error}`));
+      ensureVisible();
+    },3000);
 
     setTimeout(ensureVisible,1500);
     setTimeout(ensureVisible,4000);
