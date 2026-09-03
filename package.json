@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "qrcode": "^1.5.4",
-    "tiktok-live-connector": "^2.4.4",
+    "tiktok-live-connector": "2.4.4",
     "ws": "^8.18.3"
   },
   "devDependencies": {
