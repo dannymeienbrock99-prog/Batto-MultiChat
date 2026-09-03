@@ -1,13 +1,14 @@
 {
   "name": "batto-multichat",
-  "version": "0.1.0-test",
+  "version": "0.2.0-test",
   "private": true,
-  "description": "BATTO MULTI-CHAT – Twitch · CNG · TikTok · YouTube",
+  "description": "BATTO MULTI-CHAT – Twitch · CNG · TikTok · YouTube · OBS",
   "author": "Crazy_Batto",
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/*.test.cjs"
+    "check": "node scripts/check-syntax.cjs",
+    "test": "node scripts/check-syntax.cjs && node --test test/*.test.cjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
