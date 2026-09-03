@@ -18,7 +18,7 @@ class EulerClient{
   sendChat(roomId,message){return this.request(`/webcast/rooms/${encodeURIComponent(roomId)}/chat`,{method:"POST",query:{message:String(message)}});}
   gifts({pageSize=100,pageNumber=1,orderBy,ascending=true}={}){return this.request("/webcast/gifts/catalog",{query:{pageSize,pageNumber,orderBy,ascending},oauth:false,requireApiKey:true});}
   gift(id){return this.request(`/webcast/gifts/catalog/${encodeURIComponent(id)}`,{oauth:false,requireApiKey:true});}
-  searchGifts(query){query=String(query||"").trim();if(!query)throw new Error("Gift-Suchbegriff fehlt.");return this.request("/webcast/gifts/catalog/search",{method:"POST",body:{query},oauth:false,requireApiKey:true});}
+  searchGifts(query){query=String(query||"").trim();if(!query)throw new Error("Gift-Suchbegriff fehlt.");return this.request("/webcast/gifts/catalog/search",{method:"POST",query:{query},oauth:false,requireApiKey:true});}
   roomGifts(roomId){return this.request(`/webcast/rooms/${encodeURIComponent(roomId)}/gifts`);}
   giftGallery(uniqueId,webcast_language="de"){return this.request(`/webcast/anchors/${encodeURIComponent(String(uniqueId).replace(/^@/,""))}/gift_gallery`,{query:{webcast_language}});}
   earnings(uniqueId,period="30d"){return this.request(`/webcast/anchors/${encodeURIComponent(String(uniqueId).replace(/^@/,""))}/earnings`,{query:{period}});}
