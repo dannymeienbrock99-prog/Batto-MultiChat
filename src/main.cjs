@@ -4,21 +4,25 @@ const {app,ipcMain,safeStorage,shell,clipboard}=require("electron");
 const {ChatWindowManager}=require("./services/chat-window-manager.cjs");
 const {ChatCore}=require("./services/chat-core.cjs");
 const {PlatformManager}=require("./services/platform-manager.cjs");
-const {TikTokAdapter}=require("./platforms/tiktok/tiktok-adapter.cjs");
 const {BaseAdapter}=require("./platforms/base-adapter.cjs");
+const {TikTokAdapter}=require("./platforms/tiktok/tiktok-adapter.cjs");
+const {TwitchAdapter}=require("./platforms/twitch/twitch-adapter.cjs");
+const {YouTubeAdapter}=require("./platforms/youtube/youtube-adapter.cjs");
 const {ObsWebSocketService}=require("./services/obs-websocket.cjs");
 const {StreamOverlayServer}=require("./services/stream-overlay-server.cjs");
 const {SecretStore}=require("./storage/secret-store.cjs");
 const {SettingsStore}=require("./storage/settings-store.cjs");
 const {EulerOAuth}=require("./platforms/tiktok/euler-oauth.cjs");
 const {EulerClient}=require("./platforms/tiktok/euler-client.cjs");
+const {TwitchOAuth}=require("./platforms/twitch/twitch-oauth.cjs");
+const {YouTubeOAuth}=require("./platforms/youtube/youtube-oauth.cjs");
 
 const core=new ChatCore();
 const platforms=new PlatformManager(core);
 platforms.register("tiktok",new TikTokAdapter());
-for(const name of ["twitch","cng","youtube"])platforms.register(name,new BaseAdapter(name));
+platforms.register("cng",new BaseAdapter("cng"));
 const obs=new ObsWebSocketService();
-let manager,settings,secrets,eulerOAuth,euler,streamOverlay;
+let manager,settings,secrets,eulerOAuth,euler,twitchOAuth,youtubeOAuth,streamOverlay;
 let tiktokContext={username:"",roomId:"",anchorId:""};
 
 const DEFAULT_SETTINGS={
@@ -26,6 +30,10 @@ const DEFAULT_SETTINGS={
   obs:{url:"ws://127.0.0.1:4455"},
   tiktokOAuth:{clientId:"",redirectUri:"http://127.0.0.1:48731/oauth/tiktok/callback",scopes:["webcast:fetch","webcast:chat","webcast:mute","webcast:ban","webcast:comments","webcast:moderators","webcast:sensitive_words","user:info"]},
   tiktokSession:{},
+  twitchOAuth:{clientId:"",redirectUri:"http://127.0.0.1:48732/oauth/twitch/callback",scopes:["chat:read","chat:edit"]},
+  twitchSession:{},
+  youtubeOAuth:{clientId:"",redirectUri:"http://127.0.0.1:48733",scopes:["https://www.googleapis.com/auth/youtube.readonly"]},
+  youtubeSession:{},
   ui:{ttsEnabled:false}
 };
 
@@ -37,6 +45,15 @@ async function resolveTikTokContext(username){
   tiktokContext.roomId=String(room?.response?.room_id||room?.room_id||room?.response?.roomId||"");
   tiktokContext.anchorId=String(user?.response?.user_id||user?.user_id||user?.response?.userId||"");
   return{...tiktokContext};
+}
+
+async function connectTwitch(channel){
+  const token=await twitchOAuth.accessToken();
+  if(!token)throw new Error("Twitch ist nicht angemeldet.");
+  const status=await twitchOAuth.status();
+  channel=String(channel||status.profile?.channel||status.profile?.username||"").trim().replace(/^#/,"");
+  if(!channel)throw new Error("Twitch-Kanal fehlt.");
+  return platforms.connect("twitch",{channel,token,username:status.profile?.username||channel});
 }
 
 function registerIpc(){
@@ -82,6 +99,18 @@ function registerIpc(){
   ipcMain.handle("tiktok:sensitiveWords",async()=>{if(!tiktokContext.roomId)await resolveTikTokContext();return euler.sensitiveWords(tiktokContext.roomId);});
   ipcMain.handle("tiktok:addSensitiveWord",async(_e,word)=>{if(!tiktokContext.roomId)await resolveTikTokContext();return euler.addSensitiveWord(tiktokContext.roomId,word);});
   ipcMain.handle("tiktok:deleteSensitiveWord",async(_e,word)=>{if(!tiktokContext.roomId)await resolveTikTokContext();return euler.deleteSensitiveWord(tiktokContext.roomId,word);});
+
+  ipcMain.handle("twitch:oauthStatus",()=>twitchOAuth.status());
+  ipcMain.handle("twitch:oauthBegin",(_e,c={})=>twitchOAuth.begin(c));
+  ipcMain.handle("twitch:oauthRefresh",()=>twitchOAuth.refresh());
+  ipcMain.handle("twitch:oauthRevoke",()=>twitchOAuth.revoke());
+  ipcMain.handle("twitch:connect",(_e,channel)=>connectTwitch(channel));
+
+  ipcMain.handle("youtube:oauthStatus",()=>youtubeOAuth.status());
+  ipcMain.handle("youtube:oauthBegin",(_e,c={})=>youtubeOAuth.begin(c));
+  ipcMain.handle("youtube:oauthRefresh",()=>youtubeOAuth.refresh());
+  ipcMain.handle("youtube:oauthRevoke",()=>youtubeOAuth.revoke());
+  ipcMain.handle("youtube:connect",(_e,c={})=>platforms.connect("youtube",c));
 }
 
 app.whenReady().then(async()=>{
@@ -90,6 +119,10 @@ app.whenReady().then(async()=>{
   secrets=new SecretStore(path.join(userData,"secrets.dat"),safeStorage);
   eulerOAuth=new EulerOAuth({secretStore:secrets,settingsStore:settings,shell});
   euler=new EulerClient({oauth:eulerOAuth});
+  twitchOAuth=new TwitchOAuth({secretStore:secrets,settingsStore:settings,shell});
+  youtubeOAuth=new YouTubeOAuth({secretStore:secrets,settingsStore:settings,shell});
+  platforms.register("twitch",new TwitchAdapter());
+  platforms.register("youtube",new YouTubeAdapter({oauth:youtubeOAuth}));
   const accounts=await settings.get("accounts");tiktokContext.username=String(accounts?.tiktok?.username||"").replace(/^@/,"");
   streamOverlay=new StreamOverlayServer({webRoot:path.join(__dirname,"stream-overlay"),port:48621});
   try{await streamOverlay.start();}catch(error){console.error("Stream-Overlay konnte nicht gestartet werden:",error);}
