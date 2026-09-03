@@ -16,43 +16,44 @@ Eigenständige Electron-Anwendung mit sauber getrennten Plattform-, Auth-, Moder
 
 - Standard: 560 × 760 px
 - Minimum: 420 × 520 px
-- bestehende BATTO-MULTI-CHAT-Optik bleibt die Basis
 - Einstellungen über das Zahnrad
 
-## Start ohne Installer
+## Sauberer Start unter Windows
 
 ```bat
-npm install
-npm test
-npm start
-```
-
-Nach Änderungen am `tiktok-live-connector` bei ungewöhnlichen Laufzeitfehlern einmal sauber neu installieren:
-
-```bat
+cd /d "%USERPROFILE%\Desktop\Batto-MultiChat"
+git pull
 rmdir /s /q node_modules
 npm install
 npm test
 npm start
 ```
 
-## TikTok – zwei getrennte Verbindungen
+## TikTok / Euler Stream
 
-### 1. Euler Stream API-Key
+TikTok verwendet zwei getrennte Anmeldungen.
 
-Der API-Key ist für den TikTok-LIVE-Reader / Sign-Server und den Euler-Gift-Katalog vorgesehen.
+### Euler Sign API-Key
 
-In der App:
+Für LIVE-Reader, Signierung und Gift-Katalog:
 
 `Einstellungen → Konten → TikTok → Euler Stream LIVE-Verbindung`
 
-Der Key wird über Electron `safeStorage` verschlüsselt gespeichert und nicht wieder im Renderer angezeigt.
+Der Key wird ausschließlich lokal über Electron `safeStorage` gespeichert. Mit **Account & Limits prüfen** werden `/accounts/me` und `/accounts/me/rate_limits` abgefragt, ohne den Key an den Renderer zurückzugeben.
 
-### 2. TikTok/Euler OAuth
+### TikTok Creator OAuth
 
-OAuth ist für Creator-Funktionen wie Moderation, Chat senden und LIVE-Center-/Analytics-Funktionen vorgesehen. Die App speichert keine TikTok-Passwörter.
+Für Chat senden, Moderation und creatorbezogene LIVE-Center-/Analytics-Funktionen muss im Euler Dashboard einmal ein OAuth Client erstellt werden.
 
-Aktuell angeforderte Scopes:
+Redirect URI:
+
+```text
+http://127.0.0.1:48731/oauth/tiktok/callback
+```
+
+Benötigt werden Euler OAuth Client ID und Client Secret. Die App speichert keine TikTok-Passwörter.
+
+Scopes:
 
 - `webcast:fetch`
 - `webcast:chat`
@@ -66,24 +67,16 @@ Aktuell angeforderte Scopes:
 - `webcast:rankings`
 - `user:info`
 
-Wenn neue Scopes hinzukommen, muss TikTok einmal neu autorisiert werden.
+Wenn sich Scopes ändern, TikTok einmal neu autorisieren.
 
-## TikTok LIVE Funktionen
+### TikTok LIVE Funktionen
 
 - Chat
 - Gifts mit Gift-ID, Name, Bild, Diamanten und Combo
-- Likes
-- Joins / Viewer-Updates
-- Follows
-- Shares
-- Subs
-- Fragen / Poll Events
-- Rankings
-- Goals
+- Likes, Joins/Viewer, Follows, Shares, Subs
+- Fragen, Poll Events, Rankings und Goals
 - Stream-Ende
-- LIVE Match / PK (`linkMicBattle`)
-- PK-Punkte (`linkMicArmies`)
-- weitere Link-Mic-/Battle-Ereignisse
+- LIVE Match / PK und PK-Punkte
 - Mute / Unmute
 - Ban / Unban
 - Moderatoren verwalten
@@ -91,7 +84,47 @@ Wenn neue Scopes hinzukommen, muss TikTok einmal neu autorisiert werden.
 - Sensitive Words
 - Chat senden
 - Gift-Katalog und Gift-Suche
-- LIVE-Center-Daten, soweit vom angemeldeten Euler/TikTok-Konto freigegeben
+- LIVE-Center-Daten soweit vom Konto/Plan freigegeben
+
+## Twitch
+
+BATTO verwendet für die Windows-/Electron-App den Twitch Device-Code-Flow.
+
+Einmalig:
+
+1. Twitch Developer App erstellen.
+2. Die **Client ID** in BATTO eintragen.
+3. **Mit Twitch anmelden** drücken und die Freigabe im Browser bestätigen.
+4. Danach den Twitch-Chat verbinden.
+
+Für diesen Flow wird in BATTO kein Twitch Client Secret benötigt. Lesen und Senden im verbundenen Twitch-Chat werden unterstützt.
+
+## YouTube
+
+Einmalig in Google Cloud:
+
+1. YouTube Data API v3 aktivieren.
+2. OAuth Client vom Typ **Desktop-App** erstellen.
+3. Client ID in BATTO eintragen; Client Secret ist optional.
+4. **Mit YouTube anmelden** drücken.
+5. Live-Video-ID eintragen und Live-Chat verbinden.
+
+BATTO verwendet PKCE + Loopback-Callback und den Scope `youtube.force-ssl`, damit Live-Chat gelesen und gesendet werden kann. Nach einer Scope-Änderung einmal neu anmelden.
+
+## CNG
+
+CNG wird nur über die tatsächlich vorhandenen Browserquellen integriert; es wird kein nicht dokumentierter Realtime-WebSocket erfunden.
+
+In BATTO werden lokal gespeichert:
+
+- Creator-ID
+- Alert-TTS an/aus
+- Chat-TTS an/aus
+- OBS-Chat-Token verschlüsselt via `safeStorage`
+
+BATTO kann daraus **CNG Alerts** und **CNG Chat** direkt als OBS-Browserquellen in eine ausgewählte Szene einfügen. Der Chat-Token wird nie im Status oder Repo ausgegeben.
+
+Solange CNG keinen bestätigten Realtime-Datenendpunkt bereitstellt, können einzelne CNG-Nachrichten nicht in den gemeinsamen BATTO-Chat eingelesen oder über BATTO gesendet werden. Die offizielle CNG-OBS-Chatansicht und Alerts funktionieren unabhängig davon als Browserquellen.
 
 ## OBS
 
@@ -103,6 +136,7 @@ ws://127.0.0.1:4455
 
 Unterstützt:
 
+- WebSocket-5-Authentifizierung
 - sichere Passwortspeicherung
 - Szenen laden und wechseln
 - Szenenquellen laden
@@ -110,6 +144,7 @@ Unterstützt:
 - BATTO Browserquelle anlegen
 - Multi-Gast-Zuordnung zu OBS-Quellen
 - Hologramm-Browserquelle
+- CNG Alert-/Chat-Browserquellen
 
 ## Stream Overlay
 
@@ -125,105 +160,61 @@ Editor:
 http://127.0.0.1:48621/editor
 ```
 
-Enthaltene Overlay-Typen:
+Enthalten:
 
 - Chat
-- Gift Feed
-- Gift Alarm
+- Gift Feed / Gift Alarm
 - Like-Zähler
 - Top-Gifter
-- Follower-/frei konfigurierbares Ziel
+- Ziel
 - Stream-Timer
 - Co-Host
 - TikTok-Ereignisse / PK
-- Schatztruhe
-- Portal
-- Glücksrad
-- Umfrage
-- Wortwolke
+- Schatztruhe / Portal
+- Glücksrad / Umfrage / Wortwolke
 - Text / Bild / Logo
 
-Gift-Events werden mit Bild, Name, Absender, Combo und Diamantwert an das OBS-Overlay weitergegeben. Größere Gifts erhalten einen stärkeren Gift-Alarm.
-
-### Geschenk-Test
-
-Unter `Einstellungen → Geschenke` stehen Tests für:
-
-- Rosennebel
-- Löwe
-- TikTok Universe
-
-Die App versucht zuerst, das Geschenk im aktuellen Euler-Katalog zu finden. Nur wenn dieser nicht erreichbar ist, werden fest eingebaute Test-Metadaten verwendet. Diese Fallback-Daten sind ausschließlich für den Overlay-Test gedacht.
+Gift-Events transportieren Bild, Name, Absender, Combo und Diamantwert. Für OBS stehen Tests für Rosennebel, Löwe und TikTok Universe bereit. Die App versucht zuerst den aktuellen Euler-Katalog; fest eingebaute Werte sind nur Overlay-Test-Fallbacks.
 
 ## TikTok LIVE Center
 
-Die App hat einen eigenen Bereich `TikTok LIVE Center` und kann zusätzlich das offizielle TikTok LIVE Center im Systembrowser öffnen.
-
-Je nach OAuth-Berechtigungen werden Creator-/Room-Daten, Gift-Galerie, frühere LIVE-Räume und Earnings/Analytics geladen. Fehler einzelner optionaler Endpunkte legen dabei nicht das gesamte LIVE Center lahm.
+BATTO besitzt einen eigenen LIVE-Center-Bereich und kann zusätzlich das offizielle TikTok LIVE Center öffnen. Creator-/Room-Daten, Gift-Galerie, frühere LIVE-Räume und Earnings/Analytics werden nur angezeigt, wenn OAuth-Scope und Euler-Plan den jeweiligen Endpunkt freigeben.
 
 ## Hologramm
-
-Lokale Browserquelle:
 
 ```text
 http://127.0.0.1:17821/
 ```
 
-Das Hologramm bleibt ein eigener Dienst und ist nicht mit dem großen Stream-Overlay vermischt.
-
-## Projektstruktur
-
-```text
-src/
-├── main.cjs
-├── preload.cjs
-├── runtime/
-│   └── app-runtime.cjs
-├── renderer/
-│   ├── multi-chat.html
-│   ├── multi-chat.css
-│   ├── multi-chat.js
-│   ├── hologram-controls.js
-│   └── tiktok-live-tools.js
-├── platforms/
-│   ├── tiktok/
-│   │   ├── tiktok-adapter.cjs
-│   │   ├── euler-client.cjs
-│   │   └── euler-oauth.cjs
-│   ├── twitch/
-│   ├── youtube/
-│   └── cng/
-├── services/
-│   ├── chat-core.cjs
-│   ├── platform-manager.cjs
-│   ├── obs-websocket.cjs
-│   ├── stream-overlay-server.cjs
-│   └── hologram-server.cjs
-├── storage/
-│   ├── settings-store.cjs
-│   └── secret-store.cjs
-└── stream-overlay/
-    ├── overlay.html
-    ├── overlay.css
-    ├── overlay.js
-    ├── editor.html
-    ├── editor.css
-    └── editor.js
-```
+Das Hologramm bleibt ein separater lokaler Dienst.
 
 ## Sicherheit
 
 - Secrets nur im Electron Main Process
 - Electron `safeStorage`
-- keine Tokens in Logs
 - keine TikTok-Passwörter
+- keine Tokens in GitHub
 - Context Isolation aktiv
-- Renderer erhält nur klar definierte IPC-Methoden
+- Renderer erhält nur definierte IPC-Methoden
+- CNG OBS-Chat-Token wird nicht an Status-/Diagnoseansichten zurückgegeben
 
-## Tests
+## Tests und Windows CI
+
+Lokal:
 
 ```bat
 npm test
 ```
 
-Die Tests prüfen unter anderem Chat-Normalisierung, Gift-Normalisierung, PK-Daten, Overlay-Grundstruktur und dass keine Hardware-/Sensor-Elemente versehentlich wieder eingebaut werden.
+GitHub Actions prüft zusätzlich auf `windows-latest`:
+
+- Dependency-Installation
+- Syntax aller JS/CJS-Dateien
+- Unit-/Regressionstests
+- TikTok Gift-/PK-Normalisierung
+- CNG Browser-URL- und Token-Leak-Schutz
+- Twitch-/YouTube-Sendepfade
+- Euler API-Key-Accountpfad
+- Ausschluss von Hardware-/Sensor-Overlayelementen
+
+Die CI-Konfiguration liegt unter `.github/workflows/windows-ci.yml`.
