@@ -1,10 +1,12 @@
 "use strict";
 const API="https://tiktok.eulerstream.com";
 class EulerClient{
-  constructor({oauth}={}){this.oauth=oauth;}
+  constructor({oauth,apiKeyProvider=null}={}){this.oauth=oauth;this.apiKeyProvider=apiKeyProvider;}
   async request(pathname,{method="GET",query,body,oauth=true}={}){
     const url=new URL(pathname,API);for(const[k,v]of Object.entries(query||{}))if(v!==undefined&&v!==null&&v!=="")url.searchParams.set(k,String(v));
-    const headers={"Content-Type":"application/json"};if(oauth){const token=await this.oauth.accessToken();if(!token)throw new Error("TikTok/Euler ist nicht angemeldet.");headers["x-oauth-token"]=token;}
+    const headers={"Content-Type":"application/json"};
+    if(oauth){const token=await this.oauth.accessToken();if(!token)throw new Error("TikTok/Euler ist nicht angemeldet.");headers["x-oauth-token"]=token;}
+    else{const apiKey=String(await this.apiKeyProvider?.()||"").trim();if(apiKey)headers["X-Api-Key"]=apiKey;}
     const response=await fetch(url,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const data=await response.json().catch(()=>({}));
     if(!response.ok||Number(data?.code||200)>=400)throw new Error(data?.error?.error_description||data?.error_description||data?.message||`Euler HTTP ${response.status}`);return data;
   }
