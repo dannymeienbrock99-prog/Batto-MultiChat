@@ -1,20 +1,9 @@
 "use strict";
 const {contextBridge,ipcRenderer}=require("electron");
 contextBridge.exposeInMainWorld("batto",{
-  chatHistory:o=>ipcRenderer.invoke("chat:history",o||{}),
-  chatClear:p=>ipcRenderer.invoke("chat:clear",p||"all"),
-  chatStatuses:()=>ipcRenderer.invoke("chat:statuses"),
-  chatConnect:(p,c)=>ipcRenderer.invoke("chat:connect",p,c||{}),
-  chatDisconnect:p=>ipcRenderer.invoke("chat:disconnect",p),
-  onChatMessages:cb=>ipcRenderer.on("chat:messages",(_e,data)=>cb(data)),
-  onChatStatus:cb=>ipcRenderer.on("chat:status",(_e,data)=>cb(data)),
-  toggleAlwaysOnTop:()=>ipcRenderer.invoke("window:alwaysOnTop"),
-  obsStatus:()=>ipcRenderer.invoke("obs:status"),
-  obsConnect:c=>ipcRenderer.invoke("obs:connect",c||{}),
-  obsDisconnect:()=>ipcRenderer.invoke("obs:disconnect"),
-  overlayStatus:()=>ipcRenderer.invoke("overlay:status"),
-  overlayOpen:()=>ipcRenderer.invoke("overlay:open"),
-  overlayCopyUrl:()=>ipcRenderer.invoke("overlay:copyUrl"),
-  overlayTestChat:()=>ipcRenderer.invoke("overlay:testChat"),
-  overlayTestEvent:()=>ipcRenderer.invoke("overlay:testEvent")
+  chatHistory:o=>ipcRenderer.invoke("chat:history",o||{}),chatClear:p=>ipcRenderer.invoke("chat:clear",p||"all"),chatStatuses:()=>ipcRenderer.invoke("chat:statuses"),chatConnect:(p,c)=>ipcRenderer.invoke("chat:connect",p,c||{}),chatDisconnect:p=>ipcRenderer.invoke("chat:disconnect",p),onChatMessages:cb=>ipcRenderer.on("chat:messages",(_e,data)=>cb(data)),onChatStatus:cb=>ipcRenderer.on("chat:status",(_e,data)=>cb(data)),toggleAlwaysOnTop:()=>ipcRenderer.invoke("window:alwaysOnTop"),
+  settingsGet:()=>ipcRenderer.invoke("settings:get"),settingsPatch:v=>ipcRenderer.invoke("settings:patch",v||{}),
+  obsStatus:()=>ipcRenderer.invoke("obs:status"),obsConnect:c=>ipcRenderer.invoke("obs:connect",c||{}),obsDisconnect:()=>ipcRenderer.invoke("obs:disconnect"),obsSavedPassword:()=>ipcRenderer.invoke("obs:savedPassword"),
+  overlayStatus:()=>ipcRenderer.invoke("overlay:status"),overlayOpen:()=>ipcRenderer.invoke("overlay:open"),overlayCopyUrl:()=>ipcRenderer.invoke("overlay:copyUrl"),overlayTestChat:()=>ipcRenderer.invoke("overlay:testChat"),overlayTestEvent:()=>ipcRenderer.invoke("overlay:testEvent"),
+  tiktokOAuthStatus:()=>ipcRenderer.invoke("tiktok:oauthStatus"),tiktokOAuthBegin:c=>ipcRenderer.invoke("tiktok:oauthBegin",c||{}),tiktokOAuthRefresh:()=>ipcRenderer.invoke("tiktok:oauthRefresh"),tiktokOAuthRevoke:()=>ipcRenderer.invoke("tiktok:oauthRevoke"),tiktokResolveContext:u=>ipcRenderer.invoke("tiktok:resolveContext",u),tiktokContext:()=>ipcRenderer.invoke("tiktok:context"),tiktokGifts:()=>ipcRenderer.invoke("tiktok:gifts"),tiktokGiftSearch:q=>ipcRenderer.invoke("tiktok:giftSearch",q),tiktokSendChat:m=>ipcRenderer.invoke("tiktok:sendChat",m),tiktokMuted:()=>ipcRenderer.invoke("tiktok:muted"),tiktokMute:v=>ipcRenderer.invoke("tiktok:mute",v),tiktokUnmute:u=>ipcRenderer.invoke("tiktok:unmute",u),tiktokBanned:()=>ipcRenderer.invoke("tiktok:banned"),tiktokBan:v=>ipcRenderer.invoke("tiktok:ban",v),tiktokUnban:u=>ipcRenderer.invoke("tiktok:unban",u),tiktokModerators:()=>ipcRenderer.invoke("tiktok:moderators"),tiktokAddModerator:u=>ipcRenderer.invoke("tiktok:addModerator",u),tiktokRemoveModerator:u=>ipcRenderer.invoke("tiktok:removeModerator",u),tiktokComments:e=>ipcRenderer.invoke("tiktok:comments",e),tiktokSensitiveWords:()=>ipcRenderer.invoke("tiktok:sensitiveWords"),tiktokAddSensitiveWord:w=>ipcRenderer.invoke("tiktok:addSensitiveWord",w),tiktokDeleteSensitiveWord:w=>ipcRenderer.invoke("tiktok:deleteSensitiveWord",w)
 });
