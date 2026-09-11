@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test-windows:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,6 +23,25 @@ jobs:
         with:
           node-version: '22'
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Syntax and unit tests
         run: npm test
+      - name: Build Windows setup
+        run: npm run dist:win
+      - name: Verify packaged application and checksum
+        run: npm run verify:package
+      - name: Install, launch and uninstall on Windows
+        shell: pwsh
+        run: ./scripts/test-windows-installer.ps1
+      - name: Upload ready-to-install Windows setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: Batto-MultiChat-Windows-Setup
+          path: |
+            dist/Batto-MultiChat-Setup-*-x64.exe
+            dist/SHA256SUMS.txt
+            dist/INSTALLATION.txt
+            dist/WINDOWS-INSTALLATION-TEST.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
