@@ -16,6 +16,7 @@ const {SettingsStore}=require("../storage/settings-store.cjs");
 const {EulerOAuth,DEFAULT_SCOPES}=require("../platforms/tiktok/euler-oauth.cjs");
 const {EulerClient}=require("../platforms/tiktok/euler-client.cjs");
 const {TwitchOAuth}=require("../platforms/twitch/twitch-oauth.cjs");
+const {TwitchChatColor}=require("../platforms/twitch/twitch-chat-color.cjs");
 const {YouTubeOAuth}=require("../platforms/youtube/youtube-oauth.cjs");
 
 const DEFAULT_SETTINGS={
@@ -40,6 +41,7 @@ class AppRuntime{
     this.eulerOAuth=new EulerOAuth({secretStore:this.secrets,settingsStore:this.settings,shell:this.shell});
     this.euler=new EulerClient({oauth:this.eulerOAuth,apiKeyProvider:()=>this.secrets.get("euler.apiKey")});
     this.twitchOAuth=new TwitchOAuth({secretStore:this.secrets,settingsStore:this.settings,shell:this.shell});
+    this.twitchChatColor=new TwitchChatColor({oauth:this.twitchOAuth});
     this.youtubeOAuth=new YouTubeOAuth({secretStore:this.secrets,settingsStore:this.settings,shell:this.shell});
     this.platforms.register("tiktok",new TikTokAdapter({getApiKey:()=>this.secrets.get("euler.apiKey")}));
     this.platforms.register("twitch",new TwitchAdapter());
@@ -80,6 +82,10 @@ class AppRuntime{
   }
   registerIpc(){
     const h=(name,fn)=>this.ipcMain.handle(name,fn);
+    h("twitch:chatColorGet",()=>this.twitchChatColor.get());
+    h("twitch:chatColorSet",(_e,color)=>this.twitchChatColor.set(color));
+    h("twitch:chatColorAuthorize",()=>this.twitchChatColor.authorize());
+    h("twitch:oauthCancel",()=>this.twitchOAuth.cancelAuthorization());
     h("appearance:get",()=>this.appearance.get());
     h("appearance:save",(_e,value)=>this.appearance.save(value));
     h("chat:history",(_e,o={})=>this.core.history(o.limit));h("chat:clear",(_e,p="all")=>this.core.clear(p));h("chat:statuses",()=>this.platforms.statuses());

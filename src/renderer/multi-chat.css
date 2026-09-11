@@ -22,3 +22,7 @@
 #appearance-status{min-height:2.7em;margin-bottom:0}
 .appearance-editor :focus-visible{outline:2px solid #5aa7ff;outline-offset:2px}
 @media(max-width:520px){.settings-body{grid-template-columns:110px minmax(0,1fr)}.settings-nav{padding:6px}.appearance-editor{padding:10px}.appearance-editor .row button{font-size:12px}}
+
+#twitch-color-panel[hidden],#twitch-color-custom[hidden],#twitch-color-cancel[hidden]{display:none}
+#twitch-color-panel h3{margin:0;font-size:15px}
+#twitch-color-status{min-height:2.7em;overflow-wrap:anywhere}

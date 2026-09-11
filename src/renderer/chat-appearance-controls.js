@@ -3,7 +3,8 @@
   const colors=window.BattoChatAppearance;
   const labels={twitch:"Twitch",tiktok:"TikTok",youtube:"YouTube",cng:"CNG"};
   window.createBattoAppearanceEditor=({api,onSaved})=>{
-    let saved=colors.normalize(),draft=colors.normalize(),platform="twitch",saving=false,status="",failed=false;
+    let saved=colors.normalize(),draft=colors.normalize(),platform="twitch",saving=false,status="",failed=false,activePage=false;
+    const twitchEditor=window.createBattoTwitchColorEditor({api,localColor:()=>draft.twitch.nameColor});
     const $=id=>document.getElementById(id);
     function announce(text,error=false){
       status=text;failed=error;
@@ -46,6 +47,7 @@
     function markup(){return `<h2>Hologramm & Chatfarben</h2>
       <p>Deine Farben für Multi-Chat, Hologramm und Stream-Overlay. Sie werden in deinem Benutzerprofil gespeichert.</p>
       <form id="appearance-form" class="appearance-editor card">
+        <h3>Farben in BATTO</h3>
         <fieldset id="appearance-fields">
           <label for="appearance-platform">Plattform</label>
           <select id="appearance-platform">${Object.entries(labels).map(([key,name])=>`<option value="${key}">${name}</option>`).join("")}</select>
@@ -68,13 +70,14 @@
         </fieldset>
         <p id="appearance-status" class="muted" role="status" aria-live="polite"></p>
       </form>
-      <div class="card appearance-provider-note"><strong>Farben in den Anbieter-Chats</strong><p class="muted">Diese Einstellungen gestalten deine BATTO-Ansichten. Die Chats auf den Webseiten und in den Apps der Anbieter behalten ihre eigenen Einstellungen.</p><p class="muted">Twitch lässt dich die eigene Namensfarbe direkt in den Twitch-Chateinstellungen ändern. Eine Übertragung deiner BATTO-Farben an die Anbieter ist hier nicht eingerichtet.</p></div>`;}
-    function bind(){
+      ${twitchEditor.markup()}<div class="card appearance-provider-note"><strong>Farben in den Anbieter-Chats</strong><p class="muted">Bei Twitch kannst du im Abschnitt „Meine Farbe im Twitch-Chat“ deine eigene Namensfarbe freigeben und mit „Bei Twitch speichern“ übertragen. Die lokale Farbauswahl oben gestaltet alle Nachrichten in BATTO.</p><p class="muted">Für TikTok, YouTube und CNG ist keine Übertragung frei wählbarer Namens- und Nachrichtenfarben angebunden. Ihre offiziellen Chats behalten die Anbieter-Darstellung; deine BATTO-Farben funktionieren unabhängig davon.</p></div>`;}
+    function bind(active=false){
+      activePage=active;
       if(!$("appearance-form"))return;
-      fill();
+      fill();twitchEditor.bind();twitchEditor.activate(platform,activePage);
       $("appearance-platform").onchange=e=>{
         if(!valid()){e.target.value=platform;return;}
-        platform=e.target.value;fill();
+        platform=e.target.value;fill();twitchEditor.activate(platform,activePage);
       };
       for(const [kind,key] of [["name","customName"],["message","customMessage"]]){
         $("appearance-"+kind+"-custom").onchange=e=>{

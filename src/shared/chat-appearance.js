@@ -35,5 +35,12 @@
       messageColor:entry?.customMessage===true?hex(entry.messageColor):""
     };
   }
-  return {platforms,hex,normalize,resolve};
+  const twitchColors=Object.freeze({
+    blue:["Blau","#0000ff"],blue_violet:["Blauviolett","#8a2be2"],cadet_blue:["Graublau","#5f9ea0"],
+    chocolate:["Schokoladenbraun","#d2691e"],coral:["Koralle","#ff7f50"],dodger_blue:["Leuchtblau","#1e90ff"],
+    firebrick:["Ziegelrot","#b22222"],golden_rod:["Goldgelb","#daa520"],green:["Grün","#008000"],
+    hot_pink:["Pink","#ff69b4"],orange_red:["Orangerot","#ff4500"],red:["Rot","#ff0000"],
+    sea_green:["Seegrün","#2e8b57"],spring_green:["Frühlingsgrün","#00ff7f"],yellow_green:["Gelbgrün","#9acd32"]
+  });
+  return {platforms,hex,normalize,resolve,twitchColors};
 });

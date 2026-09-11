@@ -2,6 +2,7 @@
 (()=>{
   const scripts=[
     "../shared/chat-appearance.js",
+    "twitch-color-controls.js",
     "chat-appearance-controls.js",
     "multi-chat.js",
     "hologram-controls.js",
@@ -17,7 +18,7 @@
   const loadOne=src=>new Promise((resolve,reject)=>{
     setStatus(`Lade ${src} …`);
     const script=document.createElement("script");
-    script.src=`./${src}?v=R20260911-1`;
+    script.src=`./${src}?v=R20260911-2`;
     script.async=false;
     script.onload=()=>{console.log(`[BATTO Loader] OK ${src}`);resolve();};
     script.onerror=()=>reject(new Error(`${src} konnte nicht geladen werden.`));
