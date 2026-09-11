@@ -5,15 +5,25 @@ class YouTubeAdapter extends EventEmitter{
   status(){return{platform:this.platform,connected:this.connected,configured:Boolean(this.videoId||this.liveChatId),videoId:this.videoId,liveChatId:this.liveChatId};}
   emitStatus(extra={}){this.emit("status",{...this.status(),...extra});}
   async api(path,params={},options={}){
+    options.signal?.throwIfAborted();
     const token=await this.oauth.accessToken();if(!token)throw new Error("YouTube ist nicht angemeldet.");
     const url=new URL(`https://www.googleapis.com/youtube/v3/${path}`);for(const[k,v]of Object.entries(params))if(v!==undefined&&v!==null&&v!=="")url.searchParams.set(k,String(v));
-    const response=await fetch(url,{method:options.method||"GET",headers:{Authorization:`Bearer ${token}`,...(options.body?{"Content-Type":"application/json"}:{})},body:options.body?JSON.stringify(options.body):undefined});
+    options.signal?.throwIfAborted();options.beforeSend?.();
+    const response=await fetch(url,{method:options.method||"GET",headers:{Authorization:`Bearer ${token}`,...(options.body?{"Content-Type":"application/json"}:{})},body:options.body?JSON.stringify(options.body):undefined,signal:options.signal});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error?.message||`YouTube HTTP ${response.status}`);return data;
   }
   async resolveLiveChatId(){if(this.liveChatId)return this.liveChatId;if(!this.videoId)throw new Error("YouTube Video-ID fehlt.");const data=await this.api("videos",{part:"liveStreamingDetails",id:this.videoId});this.liveChatId=data.items?.[0]?.liveStreamingDetails?.activeLiveChatId||"";if(!this.liveChatId)throw new Error("Für dieses Video wurde kein aktiver Live-Chat gefunden.");return this.liveChatId;}
   async connect(config={}){await this.disconnect();this.videoId=String(config.videoId||"").trim();this.liveChatId=String(config.liveChatId||"").trim();this.pageToken="";this.seen.clear();await this.resolveLiveChatId();this.connected=true;this.emitStatus();await this.poll();return this.status();}
   async poll(){if(!this.connected)return;try{const data=await this.api("liveChat/messages",{liveChatId:this.liveChatId,part:"snippet,authorDetails",pageToken:this.pageToken,maxResults:200});this.pageToken=data.nextPageToken||this.pageToken;for(const item of data.items||[]){if(item.id&&this.seen.has(item.id))continue;if(item.id){this.seen.add(item.id);if(this.seen.size>1000)this.seen.delete(this.seen.values().next().value)}const a=item.authorDetails||{},s=item.snippet||{};this.emit("message",{platform:"youtube",username:a.displayName||"YouTube User",userId:a.channelId||"",avatar:a.profileImageUrl||"",message:s.displayMessage||"",role:a.isChatModerator?"moderator":a.isChatOwner?"owner":"",eventType:"chat",metadata:{messageId:item.id,publishedAt:s.publishedAt,raw:item}});}const delay=Math.max(1000,Number(data.pollingIntervalMillis||3000));this.timer=setTimeout(()=>this.poll(),delay);}catch(error){this.emitStatus({error:String(error.message||error)});this.timer=setTimeout(()=>this.poll(),5000);}}
-  async send(message){message=String(message||"").trim();if(!message)throw new Error("YouTube-Nachricht ist leer.");if(message.length>200)throw new Error("YouTube-Nachricht ist zu lang.");const liveChatId=await this.resolveLiveChatId();const data=await this.api("liveChat/messages",{part:"snippet"},{method:"POST",body:{snippet:{liveChatId,type:"textMessageEvent",textMessageDetails:{messageText:message}}}});return{ok:true,platform:"youtube",id:data.id||""};}
+  async send(message,{signal,beforeSend}={}){
+    signal?.throwIfAborted();beforeSend?.();
+    message=String(message||"").trim();if(!message)throw new Error("YouTube-Nachricht ist leer.");
+    if(message.length>200)throw new Error("YouTube-Nachricht ist zu lang.");
+    const liveChatId=await this.resolveLiveChatId();
+    const data=await this.api("liveChat/messages",{part:"snippet"},{method:"POST",body:{snippet:{liveChatId,type:"textMessageEvent",textMessageDetails:{messageText:message}}},signal,beforeSend});
+    if(!data.id)throw new Error("YouTube hat keine Nachrichten-ID bestätigt. Bitte im Live-Chat prüfen.");
+    return{ok:true,platform:"youtube",id:data.id};
+  }
   async disconnect(){if(this.timer)clearTimeout(this.timer);this.timer=null;this.connected=false;this.pageToken="";this.seen.clear();this.emitStatus();return this.status();}
 }
 module.exports={YouTubeAdapter};

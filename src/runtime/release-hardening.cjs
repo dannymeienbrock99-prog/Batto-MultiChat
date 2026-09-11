@@ -4,11 +4,25 @@ const {CngBrowserTools}=require("../services/cng-browser-tools.cjs");
 function adapter(runtime,name){const a=runtime.platforms?.adapters?.get?.(name);if(!a)throw new Error(`${name} Connector ist nicht verfügbar.`);return a;}
 async function eulerApiKeyRequest(runtime,path){return runtime.euler.request(path,{oauth:false,requireApiKey:true});}
 
-async function sendChat(runtime,platform,message){
+async function sendChat(runtime,platform,message,{signal,requireConnected=false}={}){
+  signal?.throwIfAborted();
   platform=String(platform||"").toLowerCase();message=String(message||"").trim();if(!message)throw new Error("Nachricht ist leer.");
-  if(platform==="tiktok"){if(!runtime.context.roomId)await runtime.resolveTikTokContext();return runtime.euler.sendChat(runtime.context.roomId,message)}
-  if(platform==="twitch")return adapter(runtime,"twitch").send(message);
-  if(platform==="youtube")return adapter(runtime,"youtube").send(message);
+  const target=requireConnected?adapter(runtime,platform):null;
+  const original=target?.status?.();
+  const targetId=s=>s?.channel||s?.liveChatId||s?.roomId||"";
+  const beforeSend=()=>{
+    signal?.throwIfAborted();
+    if(target){const current=target.status();if(!current.connected||!targetId(original)||targetId(current)!==targetId(original))throw new Error("Die Chat-Verbindung wurde getrennt oder gewechselt. Dieser Versand wird ausgelassen.");}
+  };
+  beforeSend();
+  if(platform==="tiktok"){
+    const reader=runtime.platforms?.adapters?.get?.("tiktok")?.status?.();
+    let roomId=original?.roomId||(reader?.connected?reader.roomId:"")||runtime.context.roomId;
+    if(!roomId){await runtime.resolveTikTokContext();roomId=runtime.context.roomId}
+    return runtime.euler.sendChat(roomId,message,{signal,beforeSend});
+  }
+  if(platform==="twitch")return adapter(runtime,"twitch").send(message,{signal,beforeSend});
+  if(platform==="youtube")return adapter(runtime,"youtube").send(message,{signal,beforeSend});
   if(platform==="cng")throw new Error("CNG stellt derzeit nur OBS Alert-/Chat-Browserquellen bereit; ein offizieller API-Endpunkt zum Senden von Chatnachrichten ist nicht verfügbar.");
   throw new Error("Bitte Twitch, TikTok oder YouTube als Chat-Tab auswählen.");
 }

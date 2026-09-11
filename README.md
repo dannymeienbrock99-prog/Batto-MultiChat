@@ -126,6 +126,12 @@ BATTO kann daraus **CNG Alerts** und **CNG Chat** direkt als OBS-Browserquellen 
 
 Solange CNG keinen bestätigten Realtime-Datenendpunkt bereitstellt, können einzelne CNG-Nachrichten nicht in den gemeinsamen BATTO-Chat eingelesen oder über BATTO gesendet werden. Die offizielle CNG-OBS-Chatansicht und Alerts funktionieren unabhängig davon als Browserquellen.
 
+## Auto-Broadcast
+
+Unter **Einstellungen → Auto-Broadcast** eigene Texte, Intervall und Zielplattformen festlegen. Bis zu 20 Vorlagen werden der Reihe nach in die verbundenen Twitch-, TikTok- und YouTube-Chats gesendet. **Speichern & starten** aktiviert den Timer; **Pause** stoppt weitere Runden. Nach einem App-Neustart bleibt der Versand pausiert, die Einstellungen werden im Benutzerprofil behalten.
+
+Offline-Chats werden übersprungen. Die Statusanzeige zeigt die Übergabe an die Plattform oder einen konkreten Fehler. CNG bleibt deaktiviert, weil für diese Integration kein bestätigter Sendeweg vorhanden ist. [Anleitung, Voraussetzungen und Testgrenzen](docs/AUTO-BROADCAST.md).
+
 ## OBS
 
 OBS WebSocket Standard:

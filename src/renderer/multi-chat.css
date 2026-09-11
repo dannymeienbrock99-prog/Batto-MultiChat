@@ -26,3 +26,24 @@
 #twitch-color-panel[hidden],#twitch-color-custom[hidden],#twitch-color-cancel[hidden]{display:none}
 #twitch-color-panel h3{margin:0;font-size:15px}
 #twitch-color-status{min-height:2.7em;overflow-wrap:anywhere}
+
+.broadcast-editor{max-width:640px;min-width:0}
+.broadcast-editor fieldset{border:0;padding:0;margin:0;min-width:0}
+.broadcast-editor .broadcast-platforms{margin:14px 0}
+.broadcast-toggle{display:flex;align-items:center;gap:8px}
+.broadcast-toggle input{width:16px;height:16px;flex:0 0 auto;margin:0}
+.broadcast-message{border-top:1px solid var(--line);padding:8px 0 14px}
+.broadcast-message textarea{resize:vertical;min-width:0;min-height:70px}
+.broadcast-message .row{justify-content:space-between;margin-top:6px}
+.broadcast-actions{margin-top:16px}
+.broadcast-editor .primary{background:#347fc8;border-color:#347fc8}
+.broadcast-editor button:disabled,.broadcast-editor fieldset:disabled{opacity:.55}
+.broadcast-editor button:disabled{cursor:default}
+.broadcast-editor :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.broadcast-result{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;border-top:1px solid var(--line);padding:8px 0;overflow-wrap:anywhere}
+.broadcast-error{color:var(--bad)}
+.broadcast-text{white-space:pre-wrap;overflow-wrap:anywhere}
+#broadcast-feedback,#broadcast-state{min-height:2.7em;overflow-wrap:anywhere}
+#broadcast-summary{font:inherit;color:var(--muted);border:0;background:transparent;padding:0;cursor:pointer}
+#broadcast-summary[data-running=true]{color:var(--ok)}
+.chat-footer{gap:8px;flex-wrap:wrap}

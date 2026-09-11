@@ -26,13 +26,14 @@ async function chatRenderer(history,appearance=colors.normalize()){
   const empty=async()=>({});
   const api={
     appearanceGet:async()=>appearance,onAppearanceChanged:cb=>{onAppearance=cb;},
+    autoBroadcastGet:empty,onAutoBroadcastChanged(){},
     settingsGet:empty,chatHistory:async()=>history.slice(),chatStatuses:empty,
     tiktokOAuthStatus:empty,twitchOAuthStatus:empty,youtubeOAuthStatus:empty,
     tiktokContext:empty,obsStatus:async()=>({connected:false}),overlayStatus:empty,
     onChatMessages:callback=>{onMessages=callback;},onChatStatus(){}
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../src/renderer/multi-chat.js"),"utf8"),{
-    window:{batto:api,BattoChatAppearance:colors,createBattoAppearanceEditor:()=>({markup:()=>"",bind(){},load(){}})},document:{getElementById:()=>root}
+    window:{batto:api,BattoChatAppearance:colors,createBattoAppearanceEditor:()=>({markup:()=>"",bind(){},load(){}}),createBattoBroadcastEditor:()=>({markup:()=>"",bind(){},load(){}})},document:{getElementById:()=>root}
   });
   await new Promise(resolve=>setImmediate(resolve));
   assert.doesNotMatch(root.innerHTML,/<pre/);

@@ -38,7 +38,8 @@ class TwitchAdapter extends EventEmitter{
     this.connected=true;this.emitStatus();
     this.emit("message",{platform:"twitch",username,userId:tags["user-id"]||"",message,color:tags.color||"#9146ff",badges,role:badges.includes("broadcaster")?"broadcaster":badges.includes("moderator")?"moderator":badges.includes("vip")?"vip":"",eventType:"chat",metadata:{channel:this.config.channel,rawTags:tags,msgId:tags.id||""}});
   }
-  async send(message){
+  async send(message,{signal,beforeSend}={}){
+    signal?.throwIfAborted();beforeSend?.();
     message=String(message||"").replace(/[\r\n]+/g," ").trim();
     if(!message)throw new Error("Twitch-Nachricht ist leer.");
     if(!this.connected||!this.ws||this.ws.readyState!==WebSocket.OPEN)throw new Error("Twitch Chat ist nicht verbunden.");
