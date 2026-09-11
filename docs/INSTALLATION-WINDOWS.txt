@@ -1,0 +1,21 @@
+BATTO MULTI-CHAT 0.3.0 – WINDOWS
+
+1. Den heruntergeladenen ZIP-Ordner mit Rechtsklick → „Alle extrahieren“ entpacken.
+2. „Batto-MultiChat-Setup-0.3.0-x64.exe“ doppelt anklicken.
+3. Dem deutschen Installationsassistenten folgen. Die Installation für das eigene Benutzerkonto ist vorausgewählt.
+4. „Batto Multi-Chat“ über die Desktop-Verknüpfung oder das Startmenü öffnen.
+
+Windows 10/11, 64 Bit (x64). Electron ist enthalten. Node.js, npm und CMD werden nicht benötigt.
+
+EINRICHTUNG
+Unter Einstellungen → Konten die gewünschten Plattformkonten verbinden.
+Unter Einstellungen → Auto-Broadcast Texte, Intervall und Plattformen auswählen und „Speichern & starten“ drücken.
+Unter Einstellungen → Hologramm die Chatfarben anpassen.
+
+Auto-Broadcast sendet an die verbundenen Twitch-, TikTok- und YouTube-Chats. CNG-Senden ist derzeit nicht angebunden. Nach jedem App-Neustart bleibt Auto-Broadcast pausiert.
+
+VORHANDENE EINSTELLUNGEN
+Die Installation behält das bisherige Profil unter %APPDATA%\batto-multichat bei. Auch bei einer Deinstallation bleiben persönliche Einstellungen erhalten.
+
+PRÜFUNG
+Die Datei SHA256SUMS.txt enthält den Prüfsummenwert dieser Setup-Datei. Diese Ausgabe besitzt keine digitale Herausgebersignatur. Live-Konten und echte Chat-Sendevorgänge wurden im automatisierten Build nicht getestet.

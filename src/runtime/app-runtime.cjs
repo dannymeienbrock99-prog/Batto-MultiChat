@@ -35,7 +35,7 @@ function normalizeCatalogGift(gift={}){const raw=typeof gift.raw==="string"?(()=
 const realGiftOnlyError=()=>{throw new Error("Synthetische TikTok-Gift-Tests sind deaktiviert. BATTO verarbeitet nur echte Gift-Events aus einem laufenden TikTok LIVE.")};
 
 class AppRuntime{
-  constructor({app,ipcMain,safeStorage,shell,clipboard}={}){Object.assign(this,{app,ipcMain,safeStorage,shell,clipboard});this.core=new ChatCore();this.platforms=new PlatformManager(this.core);this.obs=new ObsWebSocketService();this.context={username:"",roomId:"",anchorId:"",secAnchorId:"",isLive:false};}
+  constructor({app,ipcMain,safeStorage,shell,clipboard,onDiagnostic}={}){Object.assign(this,{app,ipcMain,safeStorage,shell,clipboard,onDiagnostic});this.core=new ChatCore();this.platforms=new PlatformManager(this.core);this.obs=new ObsWebSocketService();this.context={username:"",roomId:"",anchorId:"",secAnchorId:"",isLive:false};}
   async start(){
     const userData=this.app.getPath("userData");
     this.settings=new SettingsStore(path.join(userData,"settings.json"),DEFAULT_SETTINGS);await this.settings.load();
@@ -67,7 +67,7 @@ class AppRuntime{
     applyAppearance(await this.appearance.load());
     try{await this.streamOverlay.start()}catch(error){console.error("Stream-Overlay konnte nicht gestartet werden:",error)}
     try{await this.hologram.start()}catch(error){console.error("Hologramm konnte nicht gestartet werden:",error)}
-    this.windowManager=new ChatWindowManager({userDataFile:path.join(userData,"multichat-window.json"),preloadPath:path.join(__dirname,"..","preload.cjs"),rendererPath:path.join(__dirname,"..","renderer","multi-chat.html"),iconPath:path.join(__dirname,"..","..","resources","batto-icon.png"),onClosed:()=>{if(process.platform!=="darwin")this.app.quit()}});
+    this.windowManager=new ChatWindowManager({onDiagnostic:this.onDiagnostic,userDataFile:path.join(userData,"multichat-window.json"),preloadPath:path.join(__dirname,"..","preload.cjs"),rendererPath:path.join(__dirname,"..","renderer","multi-chat.html"),iconPath:path.join(__dirname,"..","..","resources","batto-icon.png"),onClosed:()=>{if(process.platform!=="darwin")this.app.quit()}});
     await this.windowManager.load();this.registerIpc();this.windowManager.create();
     this.core.on("messages",batch=>{this.windowManager?.window?.webContents.send("chat:messages",batch);for(const message of batch||[]){if(message.eventType&&message.eventType!=="chat")this.streamOverlay.pushEvent(message);else{this.streamOverlay.pushChat(message);this.hologram.push(message)}}});
     this.core.on("status",status=>this.windowManager?.window?.webContents.send("chat:status",status));

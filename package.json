@@ -1,6 +1,6 @@
 {
   "name": "batto-multichat",
-  "version": "0.2.0-test",
+  "version": "0.3.0",
   "private": true,
   "description": "BATTO MULTI-CHAT – Twitch · CNG · TikTok · YouTube · OBS",
   "author": "Crazy_Batto",
@@ -8,7 +8,10 @@
   "scripts": {
     "start": "electron .",
     "check": "node scripts/check-syntax.cjs",
-    "test": "node scripts/check-syntax.cjs && node --test test/*.test.cjs"
+    "test": "node scripts/check-syntax.cjs && node --test test/*.test.cjs",
+    "prepare:icon": "node scripts/prepare-windows-icon.cjs",
+    "dist:win": "npm run prepare:icon && electron-builder --win nsis --x64 --publish never",
+    "verify:package": "node scripts/verify-windows-package.cjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
@@ -16,6 +19,54 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "electron": "38.8.6"
+    "electron": "38.8.6",
+    "electron-builder": "26.15.3"
+  },
+  "license": "UNLICENSED",
+  "build": {
+    "appId": "de.crazybatto.multichat",
+    "productName": "Batto Multi-Chat",
+    "copyright": "Copyright © 2026 Crazy_Batto",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "resources/batto-icon.png",
+      "docs/AUTO-BROADCAST.md",
+      "docs/CHAT-COLORS.md",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/batto-icon.ico",
+      "executableName": "Batto-MultiChat"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "selectPerMachineByDefault": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Batto Multi-Chat",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "de_DE"
+      ],
+      "language": "1031",
+      "artifactName": "Batto-MultiChat-Setup-${version}-${arch}.${ext}"
+    },
+    "publish": null
   }
 }

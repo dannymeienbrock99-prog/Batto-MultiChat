@@ -18,16 +18,27 @@ Eigenständige Electron-Anwendung mit sauber getrennten Plattform-, Auth-, Moder
 - Minimum: 420 × 520 px
 - Einstellungen über das Zahnrad
 
-## Sauberer Start unter Windows
+## Installation unter Windows
+
+1. Unter [Actions → BATTO Multi-Chat Windows CI](https://github.com/dannymeienbrock99-prog/Batto-MultiChat/actions/workflows/windows-ci.yml) den neuesten erfolgreichen Lauf auf **main** öffnen.
+2. Im Bereich **Artifacts** auf **Batto-MultiChat-Windows-Setup** klicken. Für den Download ist eine GitHub-Anmeldung nötig.
+3. Den heruntergeladenen ZIP-Ordner mit **Alle extrahieren** entpacken.
+4. **Batto-MultiChat-Setup-0.3.0-x64.exe** doppelt anklicken und dem deutschen Installationsassistenten folgen.
+5. **Batto Multi-Chat** über die Desktop-Verknüpfung oder das Startmenü öffnen.
+
+Windows 10/11, 64 Bit (x64). Electron ist enthalten; Node.js, npm und CMD werden für Installation und Nutzung nicht benötigt. Die Einrichtung der Plattformkonten erfolgt unter **Einstellungen → Konten**. Eigene Chatfarben und Auto-Broadcast werden ebenfalls in den Einstellungen konfiguriert.
+
+Bestehende Einstellungen unter `%APPDATA%\batto-multichat` bleiben bei Installation und Deinstallation erhalten. Auto-Broadcast bleibt nach einem App-Neustart pausiert. Das ZIP enthält eine Anleitung, die SHA256-Prüfsumme und den Windows-Testbericht. Diese Ausgabe ist nicht digital signiert. Build-Downloads bleiben 90 Tage verfügbar.
+
+## Entwicklung aus dem Quellcode
 
 ```bat
-cd /d "%USERPROFILE%\Desktop\Batto-MultiChat"
-git pull
-rmdir /s /q node_modules
-npm install
+npm ci
 npm test
 npm start
 ```
+
+Mit `npm run dist:win` wird unter Windows der Installer in `dist` gebaut. `npm run verify:package` prüft das Paket und schreibt die Prüfsummendatei. Der Installationstest läuft ausschließlich auf einem frischen GitHub-Actions-Runner.
 
 ## TikTok / Euler Stream
 
@@ -229,5 +240,9 @@ GitHub Actions prüft zusätzlich auf `windows-latest`:
 - Twitch-/YouTube-Sendepfade
 - Euler API-Key-Accountpfad
 - Ausschluss von Hardware-/Sensor-Overlayelementen
+- Windows-Setup inklusive Electron und benötigter Produktionsbibliotheken
+- Tatsächliche Installation, Desktop-/Startmenü-Verknüpfungen und Programmstart
+- Einzelinstanz, normales Programmende und Deinstallation mit Profilerhalt
+- Download des geprüften Setups als Build-Artefakt
 
 Die CI-Konfiguration liegt unter `.github/workflows/windows-ci.yml`.
