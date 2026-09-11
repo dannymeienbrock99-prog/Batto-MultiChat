@@ -2,7 +2,19 @@
 const { BaseAdapter } = require("../base-adapter.cjs");
 function first(...values){return values.find(v=>v!==undefined&&v!==null&&v!=="")}
 function userFrom(data={}){const u=data.user||data.userInfo||{};return{username:first(u.uniqueId,u.unique_id,data.uniqueId,data.unique_id,u.nickname,data.nickname,"TikTok User"),displayName:first(u.nickname,data.nickname,u.uniqueId,data.uniqueId,"TikTok User"),userId:String(first(u.userId,u.user_id,u.id,data.userId,data.user_id,"")),avatar:first(u.profilePictureUrl,u.avatarThumb?.urlList?.[0],u.avatar_medium?.url_list?.[0],data.profilePictureUrl,data.avatarUrl,""),role:(u.isModerator||data.isModerator)?"moderator":(u.isSubscriber||data.isSubscriber)?"subscriber":"",badges:first(u.userBadges,data.userBadges,[])||[]}}
-function giftFrom(data={}){const ext=data.extendedGiftInfo||data.giftDetails||data.gift||{};const id=Number(first(data.giftId,data.gift_id,ext.id,0))||0,name=String(first(data.giftName,ext.name,ext.title,`Gift ${id||""}`)).trim(),repeatCount=Number(first(data.repeatCount,data.repeat_count,data.comboCount,1))||1,diamondCount=Number(first(data.diamondCount,data.diamond_count,ext.diamondCount,ext.diamond_count,0))||0,repeatEnd=Boolean(first(data.repeatEnd,data.repeat_end,data.isFinalRepeat,data.is_final_repeat,false)),image=first(ext.image?.urlList?.[0],ext.image?.url_list?.[0],ext.imageUrl,ext.image_url,data.giftPictureUrl,data.gift_image_url,"");return{giftId:id,giftName:name,repeatCount,diamondCount,repeatEnd,imageUrl:image,totalDiamonds:diamondCount*repeatCount}}
+function giftFrom(data={}){
+  const ext={...(data.gift||{}),...(data.giftDetails||{}),...(data.extendedGiftInfo||{})};
+  const id=Number(first(data.giftId,data.gift_id,ext.id,0))||0;
+  const name=String(first(data.giftName,ext.giftName,ext.name,ext.title,`Gift ${id||""}`)).trim();
+  const repeatCount=Number(first(data.repeatCount,data.repeat_count,data.comboCount,1))||1;
+  const diamondCount=Number(first(data.diamondCount,data.diamond_count,ext.diamondCount,ext.diamond_count,0))||0;
+  const end=first(data.repeatEnd,data.repeat_end,data.isFinalRepeat,data.is_final_repeat);
+  const repeatEnd=end===true||end===1||end==="1"||end==="true";
+  const giftType=Number(first(data.giftType,data.gift_type,ext.giftType,ext.gift_type,ext.type,end!==undefined?1:0))||0;
+  const groupId=String(first(data.groupId,data.group_id,"0"));
+  const image=first(ext.image?.urlList?.[0],ext.image?.url_list?.[0],ext.imageUrl,ext.image_url,data.giftPictureUrl,data.gift_image_url,"");
+  return{giftId:id,giftName:name,giftType,groupId,repeatCount,diamondCount,repeatEnd,imageUrl:image,totalDiamonds:diamondCount*repeatCount};
+}
 function battleSummary(data={}){const users=Array.isArray(data.battleUsers)?data.battleUsers:[];return users.map(u=>u.nickname||u.uniqueId||u.userId).filter(Boolean).join(" vs ")||"LIVE-Match gestartet"}
 function armySummary(data={}){const armies=Array.isArray(data.battleArmies)?data.battleArmies:[];return armies.map(a=>`${a.hostUserId||"Host"}: ${Number(a.points||0).toLocaleString("de-DE")}`).join(" · ")||"LIVE-Match Punkte aktualisiert"}
 class TikTokAdapter extends BaseAdapter{

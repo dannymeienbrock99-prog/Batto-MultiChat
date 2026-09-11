@@ -126,6 +126,12 @@ BATTO kann daraus **CNG Alerts** und **CNG Chat** direkt als OBS-Browserquellen 
 
 Solange CNG keinen bestätigten Realtime-Datenendpunkt bereitstellt, können einzelne CNG-Nachrichten nicht in den gemeinsamen BATTO-Chat eingelesen oder über BATTO gesendet werden. Die offizielle CNG-OBS-Chatansicht und Alerts funktionieren unabhängig davon als Browserquellen.
 
+## Auto-Broadcast
+
+Unter **Einstellungen → Auto-Broadcast** eigene Texte, Intervall und Zielplattformen festlegen. Bis zu 20 Vorlagen werden der Reihe nach in die verbundenen Twitch-, TikTok- und YouTube-Chats gesendet. **Speichern & starten** aktiviert den Timer; **Pause** stoppt weitere Runden. Nach einem App-Neustart bleibt der Versand pausiert, die Einstellungen werden im Benutzerprofil behalten.
+
+Offline-Chats werden übersprungen. Die Statusanzeige zeigt die Übergabe an die Plattform oder einen konkreten Fehler. CNG bleibt deaktiviert, weil für diese Integration kein bestätigter Sendeweg vorhanden ist. [Anleitung, Voraussetzungen und Testgrenzen](docs/AUTO-BROADCAST.md).
+
 ## OBS
 
 OBS WebSocket Standard:
@@ -175,6 +181,13 @@ Enthalten:
 - Text / Bild / Logo
 
 Gift-Events transportieren Bild, Name, Absender, Combo und Diamantwert. Für OBS stehen Tests für Rosennebel, Löwe und TikTok Universe bereit. Die App versucht zuerst den aktuellen Euler-Katalog; fest eingebaute Werte sind nur Overlay-Test-Fallbacks.
+
+### Zähler und Chatfarben
+
+- Likes und Top-Gifter werden für die laufende App-Sitzung gezählt. Ältere Werte bleiben erhalten, auch wenn Ereignisse aus dem begrenzten Overlay-Verlauf fallen.
+- Bei TikTok-Geschenkserien zählt erst das Abschlussereignis den endgültigen Combo-Wert. Zwischenstände werden nicht zusätzlich auf die Topliste addiert.
+- Beim Neuladen oder Wiederverbinden der OBS-Browserquelle wird der aktuelle Verlauf samt Zählerständen übernommen. Das Leeren des Overlays setzt die Zähler zurück; ein Neustart der App beginnt eine neue Sitzung.
+- Twitch-Namensfarben bleiben im gemeinsamen Chat, im Stream-Overlay und im Hologramm erhalten.
 
 ## TikTok LIVE Center
 

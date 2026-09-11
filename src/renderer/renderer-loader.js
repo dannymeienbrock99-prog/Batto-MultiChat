@@ -1,6 +1,11 @@
 "use strict";
 (()=>{
   const scripts=[
+    "../shared/chat-appearance.js",
+    "twitch-color-controls.js",
+    "chat-appearance-controls.js",
+    "../shared/auto-broadcast.js",
+    "auto-broadcast-controls.js",
     "multi-chat.js",
     "hologram-controls.js",
     "tiktok-live-tools.js",
@@ -15,7 +20,7 @@
   const loadOne=src=>new Promise((resolve,reject)=>{
     setStatus(`Lade ${src} …`);
     const script=document.createElement("script");
-    script.src=`./${src}?v=R20260903-5`;
+    script.src=`./${src}?v=R20260911-3`;
     script.async=false;
     script.onload=()=>{console.log(`[BATTO Loader] OK ${src}`);resolve();};
     script.onerror=()=>reject(new Error(`${src} konnte nicht geladen werden.`));

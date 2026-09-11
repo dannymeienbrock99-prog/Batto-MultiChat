@@ -2,12 +2,14 @@
 const API="https://tiktok.eulerstream.com";
 class EulerClient{
   constructor({oauth,apiKeyProvider=null}={}){this.oauth=oauth;this.apiKeyProvider=apiKeyProvider;}
-  async request(pathname,{method="GET",query,body,oauth=true,requireApiKey=false}={}){
+  async request(pathname,{method="GET",query,body,oauth=true,requireApiKey=false,signal,beforeSend}={}){
+    signal?.throwIfAborted();
     const url=new URL(pathname,API);for(const[k,v]of Object.entries(query||{}))if(v!==undefined&&v!==null&&v!=="")url.searchParams.set(k,String(v));
     const headers={"Content-Type":"application/json"};
     if(oauth){const token=await this.oauth.accessToken();if(!token)throw new Error("TikTok Creator-Funktionen sind nicht angemeldet. Bitte zuerst Euler OAuth verbinden.");headers["x-oauth-token"]=token;}
     else{const apiKey=String(await this.apiKeyProvider?.()||"").trim();if(requireApiKey&&!apiKey)throw new Error("Euler Stream API-Key fehlt. Bitte unter TikTok → Euler Stream LIVE-Verbindung speichern.");if(apiKey)headers["X-Api-Key"]=apiKey;}
-    const response=await fetch(url,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const data=await response.json().catch(()=>({}));
+    signal?.throwIfAborted();beforeSend?.();
+    const response=await fetch(url,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal});const data=await response.json().catch(()=>({}));
     if(!response.ok||Number(data?.code||200)>=400){const message=data?.error?.error_description||data?.error_description||data?.message||`Euler HTTP ${response.status}`;if(response.status===429)throw new Error(`Euler Rate-Limit erreicht. ${headers["X-Api-Key"]?"Der gespeicherte API-Key wurde mitgesendet; prüfe im Euler-Dashboard dessen Status/Limit.":"Die Anfrage lief ohne API-Key."} ${message}`);throw new Error(message);}return data;
   }
   rateLimits(){return this.request("/webcast/rate_limits",{oauth:false,requireApiKey:true});}
@@ -15,7 +17,15 @@ class EulerClient{
   roomInfo(uniqueId){return this.request(`/webcast/anchors/${encodeURIComponent(String(uniqueId).replace(/^@/,""))}/room_info`,{oauth:false,requireApiKey:true});}
   userId(uniqueId){return this.request(`/webcast/anchors/${encodeURIComponent(String(uniqueId).replace(/^@/,""))}/user_id`,{oauth:false,requireApiKey:true});}
   userBasic(uniqueId){return this.request(`/tiktok/users/${encodeURIComponent(String(uniqueId).replace(/^@/,""))}/basic`,{oauth:false,requireApiKey:true});}
-  sendChat(roomId,message){return this.request(`/webcast/rooms/${encodeURIComponent(roomId)}/chat`,{method:"POST",query:{message:String(message)}});}
+  sendChat(roomId,message,{signal,beforeSend}={}){
+    roomId=String(roomId||"").trim();message=String(message||"").trim();
+    if(!roomId)throw new Error("TikTok LIVE-Raum fehlt.");
+    if(!message)throw new Error("TikTok-Nachricht ist leer.");
+    return this.request(`/webcast/rooms/${encodeURIComponent(roomId)}/chat`,{method:"POST",body:{content:message,targetRoomId:roomId},signal,beforeSend}).then(result=>{
+      if(Number(result?.code)!==200)throw new Error("Euler hat den Chat-Versand nicht bestätigt. Bitte im TikTok-LIVE-Chat prüfen.");
+      return{...result,ok:true,platform:"tiktok"};
+    });
+  }
   gifts({pageSize=100,pageNumber=1,orderBy,ascending=true}={}){return this.request("/webcast/gifts/catalog",{query:{pageSize,pageNumber,orderBy,ascending},oauth:false,requireApiKey:true});}
   gift(id){return this.request(`/webcast/gifts/catalog/${encodeURIComponent(id)}`,{oauth:false,requireApiKey:true});}
   searchGifts(query){query=String(query||"").trim();if(!query)throw new Error("Gift-Suchbegriff fehlt.");return this.request("/webcast/gifts/catalog/search",{method:"POST",query:{query},oauth:false,requireApiKey:true});}
