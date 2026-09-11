@@ -176,6 +176,13 @@ Enthalten:
 
 Gift-Events transportieren Bild, Name, Absender, Combo und Diamantwert. Für OBS stehen Tests für Rosennebel, Löwe und TikTok Universe bereit. Die App versucht zuerst den aktuellen Euler-Katalog; fest eingebaute Werte sind nur Overlay-Test-Fallbacks.
 
+### Zähler und Chatfarben
+
+- Likes und Top-Gifter werden für die laufende App-Sitzung gezählt. Ältere Werte bleiben erhalten, auch wenn Ereignisse aus dem begrenzten Overlay-Verlauf fallen.
+- Bei TikTok-Geschenkserien zählt erst das Abschlussereignis den endgültigen Combo-Wert. Zwischenstände werden nicht zusätzlich auf die Topliste addiert.
+- Beim Neuladen oder Wiederverbinden der OBS-Browserquelle wird der aktuelle Verlauf samt Zählerständen übernommen. Das Leeren des Overlays setzt die Zähler zurück; ein Neustart der App beginnt eine neue Sitzung.
+- Twitch-Namensfarben bleiben im gemeinsamen Chat, im Stream-Overlay und im Hologramm erhalten.
+
 ## TikTok LIVE Center
 
 BATTO besitzt einen eigenen LIVE-Center-Bereich und kann zusätzlich das offizielle TikTok LIVE Center öffnen. Creator-/Room-Daten, Gift-Galerie, frühere LIVE-Räume und Earnings/Analytics werden nur angezeigt, wenn OAuth-Scope und Euler-Plan den jeweiligen Endpunkt freigeben.
