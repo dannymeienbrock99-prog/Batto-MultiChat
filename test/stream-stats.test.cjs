@@ -25,6 +25,7 @@ function overlayRenderer(){
   const root={style:{},innerHTML:""};
   let stream;
   const context={
+    window:{BattoChatAppearance:require("../src/shared/chat-appearance.js")},
     document:{getElementById:()=>root,querySelectorAll:()=>[]},
     setInterval:()=>0,
     EventSource:class{constructor(){stream=this;}}

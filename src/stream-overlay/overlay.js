@@ -1,4 +1,5 @@
 "use strict";
+const colors=window.BattoChatAppearance;let appearance=colors.normalize();
 const root=document.getElementById("overlay");let config={elements:[]},state={messages:[],events:[],stats:{likeCount:0,topGifters:[]}},timerStarted=Date.now();
 const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
 function style(el){return`left:${el.x}%;top:${el.y}%;width:${el.width}%;height:${el.height}%;z-index:${el.zIndex};font-size:${el.fontSize}px;font-family:${el.fontFamily};font-weight:${el.fontWeight};color:${el.textColor};background:${hexAlpha(el.backgroundColor,el.backgroundOpacity)};border:${el.borderWidth}px solid ${el.borderColor};border-radius:${el.borderRadius}px;padding:${el.padding}px;box-shadow:0 0 ${el.shadow}px ${hexAlpha(el.accentColor,.25)};--accent:${el.accentColor};`}
@@ -6,7 +7,10 @@ function hexAlpha(hex,a){const h=String(hex||"#000000").replace('#','');if(h.len
 function title(el){return`<span class="overlay-title">${esc(el.title||'')}</span>`}
 function giftData(event={}){const g=event.gift||event.data?.gift||{};return{giftId:g.giftId||g.id||event.giftId||0,name:g.giftName||g.name||event.giftName||event.title||"Geschenk",image:g.imageUrl||g.image_url||event.giftPictureUrl||event.imageUrl||"",diamonds:Number(g.diamondCount||g.diamond_count||event.diamondCount||0)||0,repeat:Number(g.repeatCount||event.repeatCount||1)||1,total:Number(g.totalDiamonds||0)||((Number(g.diamondCount||0)||0)*(Number(g.repeatCount||1)||1)),user:event.displayName||event.username||event.name||"TikTok User"}}
 function giftEvents(){return state.events.filter(e=>(e.eventType||e.type)==='gift'||e.gift)}
-function chatHtml(el){return state.messages.slice(-Number(el.maximumItems||8)).map(m=>`<div class="msg ${esc(m.platform||'')}"><div class="meta"><span class="platform">${esc(m.platform||'chat')}</span><span class="user"${/^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(m.color||"")?` style="color:${esc(m.color)}"`:""}>${esc(m.displayName||m.username||'User')}</span></div><div class="text">${esc(m.message||m.text||'')}</div></div>`).join('')}
+function chatHtml(el){return state.messages.slice(-Number(el.maximumItems||8)).map(m=>{
+  const color=colors.resolve(appearance,m);
+  return `<div class="msg ${esc(m.platform||'')}"><div class="meta"><span class="platform">${esc(m.platform||'chat')}</span><span class="user" style="color:${color.nameColor}">${esc(m.displayName||m.username||'User')}</span></div><div class="text"${color.messageColor?` style="color:${color.messageColor}"`:""}>${esc(m.message||m.text||'')}</div></div>`;
+}).join('')}
 function giftRow(event){const g=giftData(event);return`<div class="gift-row">${g.image?`<img class="gift-image" src="${esc(g.image)}" alt="">`:''}<div class="gift-copy"><strong>${esc(g.user)}</strong><span>${esc(g.name)}${g.repeat>1?` ×${g.repeat}`:''}</span>${g.diamonds?`<small>${g.diamonds.toLocaleString('de-DE')} Diamanten${g.repeat>1?` · gesamt ${g.total.toLocaleString('de-DE')}`:''}</small>`:''}</div></div>`}
 function giftsHtml(el){return giftEvents().slice(-Number(el.maximumItems||8)).map(giftRow).join('')}
 function giftAlarmHtml(el,event){const g=giftData(event),tier=g.diamonds>=10000?'legendary':g.diamonds>=1000?'major':'normal';return`${title(el)}<div class="gift-alarm ${tier}">${g.image?`<img src="${esc(g.image)}" alt="">`:''}<div><small>${esc(g.user)} sendet</small><strong>${esc(g.name)}${g.repeat>1?` ×${g.repeat}`:''}</strong>${g.diamonds?`<span>${g.total.toLocaleString('de-DE')} Diamanten</span>`:''}</div></div>`}
@@ -17,7 +21,9 @@ function updateTimers(){const elapsed=Math.max(0,Date.now()-timerStarted),total=
 // Every SSE connection starts with one ordered snapshot, including session totals.
 // A second HTTP fetch could overwrite newer live events with an older snapshot.
 function receive(data){
+  if(data.type==='appearance'){appearance=colors.normalize(data.appearance);render();return}
   if(data.type==='config'){
+    if(data.appearance)appearance=colors.normalize(data.appearance);
     config=data.config||config;
     if(data.state){state=data.state;timerStarted=state.startedAt||Date.now()}
     render();return;

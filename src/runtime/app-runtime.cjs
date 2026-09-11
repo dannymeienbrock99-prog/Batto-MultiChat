@@ -10,6 +10,7 @@ const {CngAdapter}=require("../platforms/cng/cng-adapter.cjs");
 const {ObsWebSocketService}=require("../services/obs-websocket.cjs");
 const {StreamOverlayServer}=require("../services/stream-overlay-server.cjs");
 const {HologramServer}=require("../services/hologram-server.cjs");
+const {ChatAppearanceService}=require("../services/chat-appearance.cjs");
 const {SecretStore}=require("../storage/secret-store.cjs");
 const {SettingsStore}=require("../storage/settings-store.cjs");
 const {EulerOAuth,DEFAULT_SCOPES}=require("../platforms/tiktok/euler-oauth.cjs");
@@ -47,6 +48,13 @@ class AppRuntime{
     const accounts=await this.settings.get("accounts");this.context.username=String(accounts?.tiktok?.username||"").replace(/^@/,"");
     this.streamOverlay=new StreamOverlayServer({webRoot:path.join(__dirname,"..","stream-overlay"),configFile:path.join(userData,"stream-overlay.json"),port:48621});
     this.hologram=new HologramServer({port:17821});
+    const applyAppearance=value=>{
+      this.streamOverlay.setAppearance(value);
+      this.hologram.setAppearance(value);
+      this.windowManager?.window?.webContents.send("appearance:changed",value);
+    };
+    this.appearance=new ChatAppearanceService({settingsStore:this.settings,onChange:applyAppearance});
+    applyAppearance(await this.appearance.load());
     try{await this.streamOverlay.start()}catch(error){console.error("Stream-Overlay konnte nicht gestartet werden:",error)}
     try{await this.hologram.start()}catch(error){console.error("Hologramm konnte nicht gestartet werden:",error)}
     this.windowManager=new ChatWindowManager({userDataFile:path.join(userData,"multichat-window.json"),preloadPath:path.join(__dirname,"..","preload.cjs"),rendererPath:path.join(__dirname,"..","renderer","multi-chat.html"),iconPath:path.join(__dirname,"..","..","resources","batto-icon.png"),onClosed:()=>{if(process.platform!=="darwin")this.app.quit()}});
@@ -72,6 +80,8 @@ class AppRuntime{
   }
   registerIpc(){
     const h=(name,fn)=>this.ipcMain.handle(name,fn);
+    h("appearance:get",()=>this.appearance.get());
+    h("appearance:save",(_e,value)=>this.appearance.save(value));
     h("chat:history",(_e,o={})=>this.core.history(o.limit));h("chat:clear",(_e,p="all")=>this.core.clear(p));h("chat:statuses",()=>this.platforms.statuses());
     h("chat:connect",async(_e,p,c={})=>{if(p==="tiktok"){const key=await this.secrets.get("euler.apiKey");if(!key)throw new Error("Euler Stream API-Key fehlt. Einmal unter TikTok → Verbindung eintragen.");c={...c,signApiKey:key}}const result=await this.platforms.connect(p,c);if(p==="tiktok"&&c.username){const accounts=await this.settings.get("accounts");accounts.tiktok={...(accounts.tiktok||{}),username:String(c.username)};await this.settings.set("accounts",accounts);this.context.username=String(c.username).replace(/^@/,"")}return result});
     h("chat:disconnect",(_e,p)=>this.platforms.disconnect(p));h("window:alwaysOnTop",()=>this.windowManager.toggleAlwaysOnTop());h("settings:get",()=>this.settings.get());h("settings:patch",(_e,v)=>this.settings.patch(v||{}));
